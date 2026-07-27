@@ -36,6 +36,8 @@
     .badge-deal { background: #F0FDF4; color: var(--accent-success); }
     .badge-measure { background: #FFFBEB; color: var(--accent-warning); }
     .badge-won { background: #F0FDF4; color: var(--accent-success); }
+    .price-edit { cursor: text; border-bottom: 1px dashed var(--border-light); padding: 0 2px; }
+    .price-edit:focus { outline: none; border-bottom-color: var(--accent-primary); }
     .badge-lost { background: #FEF2F2; color: var(--accent-error); }
 
     .assistant-panel { background: var(--surface-card); border: 1px solid var(--border-light); border-radius: 8px; display: flex; flex-direction: column; height: 450px; }
@@ -83,6 +85,7 @@
         <a href="#" data-section="leads">Лиды</a>
         <a href="#" data-section="deals">Сделки</a>
         <a href="#" data-section="calculator">Сметы</a>
+        <a href="#" data-section="prices">Цены</a>
         <a href="#" data-section="assistant">Ассистент</a>
       </nav>
     </aside>
@@ -160,6 +163,24 @@
             <div class="loading" id="advLoading"><div class="spinner"></div><p style="font-size:0.8125rem;color:var(--text-secondary);">Расчёт...</p></div>
           </div>
         </div>
+      </section>
+
+      <!-- Prices -->
+      <section class="mgr-section" id="section-prices">
+        <h2 style="font-size:1.25rem;font-weight:600;margin-bottom:1rem;">Справочник цен</h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+          <div>
+            <h3 style="font-size:1rem;font-weight:600;margin-bottom:0.75rem;">Типы потолков</h3>
+            <div class="table-wrap"><table><thead><tr><th>Тип</th><th>₽/м²</th><th></th></tr></thead><tbody id="pricesCeilingBody"></tbody></table></div>
+            <h3 style="font-size:1rem;font-weight:600;margin:1rem 0 0.75rem;">Профиль</h3>
+            <div class="table-wrap" style="max-width:300px;"><table><thead><tr><th>Тип</th><th>₽/м</th><th></th></tr></thead><tbody id="pricesProfileBody"></tbody></table></div>
+          </div>
+          <div>
+            <h3 style="font-size:1rem;font-weight:600;margin-bottom:0.75rem;">Дополнительные опции</h3>
+            <div class="table-wrap"><table><thead><tr><th>Опция</th><th>Ед.</th><th>₽</th><th></th></tr></thead><tbody id="pricesOptionsBody"></tbody></table></div>
+          </div>
+        </div>
+        <div style="margin-top:0.75rem;font-size:0.75rem;color:var(--text-secondary);">Изменения применяются сразу: калькулятор, ИИ-бот и FAQ используют актуальные цены.</div>
       </section>
 
       <!-- Assistant -->

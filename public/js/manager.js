@@ -229,10 +229,67 @@
     }
   });
 
+  // Prices
+  async function loadPrices() {
+    try {
+      const res = await fetch('/api/prices');
+      const data = await res.json();
+
+      const ceilingBody = document.getElementById('pricesCeilingBody');
+      ceilingBody.innerHTML = data.ceilingTypes.map(c => `
+        <tr>
+          <td>${c.label}</td>
+          <td><span class="price-edit" data-type="ceiling" data-id="${c.id}" data-field="pricePerM2" contenteditable>${c.pricePerM2}</span></td>
+          <td>₽/м²</td>
+        </tr>
+      `).join('');
+
+      const profileBody = document.getElementById('pricesProfileBody');
+      profileBody.innerHTML = `
+        <tr>
+          <td>${data.profile.label}</td>
+          <td><span class="price-edit" data-type="profile" data-field="price" contenteditable>${data.profile.price}</span></td>
+          <td>₽/м</td>
+        </tr>
+      `;
+
+      const optionsBody = document.getElementById('pricesOptionsBody');
+      optionsBody.innerHTML = data.options.map(o => `
+        <tr>
+          <td>${o.label}</td>
+          <td>${o.unit}</td>
+          <td><span class="price-edit" data-type="option" data-id="${o.id}" data-field="price" contenteditable>${o.price}</span></td>
+        </tr>
+      `).join('');
+
+      document.querySelectorAll('.price-edit').forEach(el => {
+        el.addEventListener('blur', async function() {
+          const newVal = parseFloat(this.textContent.trim());
+          if (isNaN(newVal) || newVal < 0) { this.textContent = this.dataset.orig; return; }
+          const type = this.dataset.type;
+          const id = this.dataset.id;
+          const field = this.dataset.field;
+          const body = { [field]: newVal };
+          let url;
+          if (type === 'ceiling') url = `/api/prices/ceiling/${id}`;
+          else if (type === 'option') url = `/api/prices/option/${id}`;
+          else if (type === 'profile') url = `/api/prices/profile`;
+          try {
+            await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+          } catch (e) { console.error('Save price error:', e); this.textContent = this.dataset.orig; }
+        });
+        el.addEventListener('focus', function() { this.dataset.orig = this.textContent; });
+      });
+    } catch (e) {
+      console.error('Prices load error:', e);
+    }
+  }
+
   // Initial load
   loadDashboard();
   loadLeads();
   loadDeals();
+  loadPrices();
 
   // Refresh data when switching sections
   document.querySelectorAll('.mgr-sidebar a').forEach(link => {
@@ -241,6 +298,7 @@
       if (section === 'dashboard') loadDashboard();
       if (section === 'leads') loadLeads();
       if (section === 'deals') loadDeals();
+      if (section === 'prices') loadPrices();
     });
   });
 })();

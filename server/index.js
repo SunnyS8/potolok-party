@@ -10,6 +10,7 @@ const crm = require('./crm');
 const calc = require('./calculator');
 const assistant = require('./assistant');
 const analytics = require('./analytics');
+const prices = require('./prices');
 
 const app = express();
 app.use(cors());
@@ -182,10 +183,53 @@ app.post('/api/assistant/template', async (req, res) => {
   }
 });
 
-app.get('/api/assistant/faq', async (req, res) => {
+app.get('/api/prices', (req, res) => {
+  try { res.json(prices.getAll()); }
+  catch (err) { res.status(500).json({ error: 'Ошибка загрузки цен' }); }
+});
+
+app.put('/api/prices', (req, res) => {
+  try { prices.save(req.body); res.json({ ok: true }); }
+  catch (err) { res.status(500).json({ error: 'Ошибка сохранения цен' }); }
+});
+
+app.put('/api/prices/ceiling/:id', (req, res) => {
   try {
-    res.json(assistant.FAQ.map(f => ({ keywords: f.q.slice(0, 3), answer: f.a })));
+    const data = prices.getAll();
+    const idx = data.ceilingTypes.findIndex(c => c.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: 'Не найдено' });
+    data.ceilingTypes[idx] = { ...data.ceilingTypes[idx], ...req.body };
+    prices.save(data);
+    res.json({ ok: true, item: data.ceilingTypes[idx] });
+  } catch (err) { res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.put('/api/prices/option/:id', (req, res) => {
+  try {
+    const data = prices.getAll();
+    const idx = data.options.findIndex(o => o.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: 'Не найдено' });
+    data.options[idx] = { ...data.options[idx], ...req.body };
+    prices.save(data);
+    res.json({ ok: true, item: data.options[idx] });
+  } catch (err) { res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.put('/api/prices/profile', (req, res) => {
+  try {
+    const data = prices.getAll();
+    data.profile = { ...data.profile, ...req.body };
+    prices.save(data);
+    res.json({ ok: true, item: data.profile });
+  } catch (err) { res.status(500).json({ error: 'Ошибка' }); }
+});
+
+app.get('/api/assistant/faq', (req, res) => {
+  try {
+    const faq = assistant.buildFAQ();
+    res.json(faq.map(f => ({ keywords: f.q.slice(0, 3), answer: f.a })));
   } catch (err) {
+    console.error('FAQ error:', err);
     res.status(500).json({ error: 'Ошибка загрузки FAQ' });
   }
 });
