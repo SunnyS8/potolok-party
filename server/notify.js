@@ -26,16 +26,19 @@ async function sendEmailNotification(data) {
   if (!to) return { sent: false, reason: 'No recipient email' };
 
   const subject = `🔔 Новая заявка: ${data.name || 'без имени'}`;
+  const productLabel = data.productType === 'walls' ? 'СИС (стены)' : data.productType === 'combined' ? 'Потолки + Стены' : 'Потолки';
+  const wallInfo = data.hasWalls || data.productType === 'walls' || data.productType === 'combined'
+    ? `Стены (СИС): ${data.wallArea ? data.wallArea + ' м²' : 'Да'}\n`
+    : '';
   const text = `
-Новая заявка с сайта «Потолок Пати»
+Новая заявка с сайта «ИКС»
 
 Имя: ${data.name || '—'}
 Телефон: ${data.phone || '—'}
 Email: ${data.email || '—'}
 Источник: ${data.source || 'сайт'}
-Тип потолка: ${data.ceilingType || '—'}
-Площадь: ${data.area ? data.area + ' м²' : '—'}
-Светильники: ${data.hasLights ? 'Да' : 'Нет/Не указано'}
+Продукт: ${productLabel}
+${data.productType !== 'walls' ? `Тип потолка: ${data.ceilingType || '—'}\nПлощадь: ${data.area ? data.area + ' м²' : '—'}\n` : ''}${wallInfo}Светильники: ${data.hasLights ? 'Да' : 'Нет/Не указано'}
 Комментарий: ${data.notes || '—'}
 
 Дата: ${new Date().toLocaleString('ru-RU')}
@@ -55,13 +58,18 @@ async function sendTelegramNotification(data) {
   const chatId = process.env.TELEGRAM_CHAT_ID;
   if (!token || !chatId) return { sent: false, reason: 'Telegram not configured' };
 
+  const productLabel = data.productType === 'walls' ? 'Стены СИС' : data.productType === 'combined' ? 'Потолки+Стены' : 'Потолки';
+  const wallLine = data.hasWalls || data.productType === 'walls' || data.productType === 'combined'
+    ? `\n🧱 Стены: ${data.wallArea ? data.wallArea + ' м²' : 'Да'}`
+    : '';
+  const ceilingLine = data.productType !== 'walls'
+    ? `\n📐 Тип: ${data.ceilingType || '—'}\n📏 Площадь: ${data.area ? data.area + ' м²' : '—'}`
+    : '';
   const text = `
-🔔 <b>Новая заявка</b>
+🔔 <b>Новая заявка (${productLabel})</b>
 👤 ${data.name || '—'}
 📞 ${data.phone || '—'}
-📧 ${data.email || '—'}
-📐 Тип: ${data.ceilingType || '—'}
-📏 Площадь: ${data.area ? data.area + ' м²' : '—'}
+📧 ${data.email || '—'}${ceilingLine}${wallLine}
 💡 Свет: ${data.hasLights ? 'Да' : 'Нет'}
 📝 ${data.notes || '—'}
   `.trim();

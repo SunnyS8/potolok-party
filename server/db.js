@@ -46,8 +46,19 @@ function updateLead(id, updates) {
 
 function saveCalcRequest(data) {
   const items = readJson(CALC_FILE, []);
-  items.push({ id: items.length + 1, ...data, created_at: new Date().toISOString() });
+  const entry = { id: items.length + 1, ...data, created_at: new Date().toISOString() };
+  items.push(entry);
   writeJson(CALC_FILE, items);
+  return entry;
+}
+
+function updateCalcRequest(id, updates) {
+  const items = readJson(CALC_FILE, []);
+  const idx = items.findIndex(i => i.id === id);
+  if (idx === -1) return null;
+  items[idx] = { ...items[idx], ...updates };
+  writeJson(CALC_FILE, items);
+  return items[idx];
 }
 
 function saveChatMessage(sessionId, role, content) {
@@ -121,9 +132,11 @@ function getAnalyticsEvents(type, since) {
   return events.filter(e => (!type || e.type === type) && new Date(e.timestamp) >= sinceDate);
 }
 
+function getCalcRequests() { return readJson(CALC_FILE, []).reverse(); }
+
 module.exports = {
   saveLead, updateLead, getLeads, getLeadById,
-  saveCalcRequest, saveChatMessage,
+  saveCalcRequest, updateCalcRequest, getCalcRequests, saveChatMessage,
   saveDeal, updateDeal, getDeals,
   saveTask, updateTask, getTasks,
   saveQuote, getQuotes,

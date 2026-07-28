@@ -1,4 +1,15 @@
 (function() {
+  if (location.search.includes('demo') && !localStorage.getItem('auth_token')) {
+    localStorage.setItem('auth_token', 'demo');
+  }
+  const authToken = localStorage.getItem('auth_token');
+  async function apiFetch(url, options) {
+    const headers = { ...(options?.headers || {}) };
+    if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
+    const res = await fetch(url, { ...options, headers });
+    if (res.status === 401) { localStorage.removeItem('auth_token'); window.location.href = '/login.html'; return; }
+    return res;
+  }
   // Navigation
   document.querySelectorAll('.mgr-sidebar a').forEach(link => {
     link.addEventListener('click', (e) => {
@@ -14,7 +25,7 @@
   // Load dashboard
   async function loadDashboard() {
     try {
-      const res = await fetch('/api/analytics/dashboard');
+      const res = await apiFetch('/api/analytics/dashboard');
       const data = await res.json();
 
       document.getElementById('statLeadsTotal').textContent = data.leads.total;
@@ -41,7 +52,7 @@
   // Load leads
   async function loadLeads() {
     try {
-      const res = await fetch('/api/leads');
+      const res = await apiFetch('/api/leads');
       const leads = await res.json();
       const body = document.getElementById('leadsBody');
       body.innerHTML = leads.slice(0, 50).map(l => {
@@ -57,7 +68,7 @@
   // Load deals
   async function loadDeals() {
     try {
-      const res = await fetch('/api/crm/deals');
+      const res = await apiFetch('/api/crm/deals');
       const deals = await res.json();
       const body = document.getElementById('dealsBody');
       body.innerHTML = deals.slice(0, 50).map(d => {
@@ -74,7 +85,7 @@
         </td><td>${d.created_at ? new Date(d.created_at).toLocaleDateString('ru-RU') : '—'}</td></tr>`;
       }).join('') || '<tr><td colspan="7">Нет сделок</td></tr>';
       window.updateDealStatus = async (id, status) => {
-        await fetch(`/api/crm/deal/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+        await apiFetch(`/api/crm/deal/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
         loadDeals();
         loadDashboard();
       };
@@ -124,7 +135,7 @@
     quoteText.style.display = 'none';
 
     try {
-      const res = await fetch('/api/calculator/advanced', {
+      const res = await apiFetch('/api/calculator/advanced', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(params)
       });
       const data = await res.json();
@@ -152,7 +163,7 @@
     if (!estimate) { alert('Сначала рассчитайте смету'); return; }
 
     try {
-      const res = await fetch('/api/calculator/quote', {
+      const res = await apiFetch('/api/calculator/quote', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ estimate, client: { name: clientName } })
       });
@@ -191,7 +202,7 @@
     assistantHistory.push({ role: 'user', content: text });
 
     try {
-      const res = await fetch('/api/assistant/chat', {
+      const res = await apiFetch('/api/assistant/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text, history: assistantHistory.slice(-10) })
       });
@@ -218,7 +229,7 @@
     if (!btn) return;
     const type = btn.dataset.template;
     try {
-      const res = await fetch('/api/assistant/template', {
+      const res = await apiFetch('/api/assistant/template', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type, data: { name: '{Имя}', ceilingType: '{Тип}', total: 0 } })
       });
@@ -232,7 +243,7 @@
   // Prices
   async function loadPrices() {
     try {
-      const res = await fetch('/api/prices');
+      const res = await apiFetch('/api/prices');
       const data = await res.json();
 
       const ceilingBody = document.getElementById('pricesCeilingBody');
@@ -241,6 +252,7 @@
           <td>${c.label}</td>
           <td><span class="price-edit" data-type="ceiling" data-id="${c.id}" data-field="pricePerM2" contenteditable>${c.pricePerM2}</span></td>
           <td>₽/м²</td>
+          <td><button class="price-del" data-endpoint="ceiling/${c.id}" title="Удалить">✕</button></td>
         </tr>
       `).join('');
 
@@ -253,15 +265,118 @@
         </tr>
       `;
 
+      const iksBody = document.getElementById('pricesIksBody');
+      if (data.iks) {
+        const iksLabels = {
+          wallpaperPerSqm: 'Полотно MSD / м²', profileBase: 'Профиль ID базовый',
+          profileInnerCorner: 'ID внутр. угол', profileOuterCorner: 'ID внешн. угол',
+          profileShadowBaseboard: 'Плинтус ID теневой', profileWallCeiling: 'ID стена-потолок',
+          profileSeparator: 'ID разделительный', tonlosAcousticFelt: 'TÖNLOS ACOUSTIC FELT',
+          tonlosHeavyFelt: 'TÖNLOS HEAVY FELT', fintek150: 'Fintek 150',
+          insertID: 'Вставка ID (короб 100 м)', insertType1: 'Закладная тип 1',
+          insertType2: 'Закладная тип 2', insertType3: 'Закладная тип 3',
+          adhesiveLiquidPer5L: 'Клей жидкий TÖNLOS 5 л', adhesiveSprayPer650ml: 'Клей аэрозоль TÖNLOS 650 мл',
+        };
+        const iksUnits = {
+          wallpaperPerSqm: '₽/м²', profileBase: '₽/шт', profileInnerCorner: '₽/шт',
+          profileOuterCorner: '₽/шт', profileShadowBaseboard: '₽/шт', profileWallCeiling: '₽/шт',
+          profileSeparator: '₽/шт', tonlosAcousticFelt: '₽/уп', tonlosHeavyFelt: '₽/уп',
+          fintek150: '₽/уп', insertID: '₽/короб', insertType1: '₽/шт', insertType2: '₽/шт',
+          insertType3: '₽/шт', adhesiveLiquidPer5L: '₽/канистра', adhesiveSprayPer650ml: '₽/баллон',
+        };
+        iksBody.innerHTML = Object.entries(iksLabels).map(([k, label]) => `
+          <tr>
+            <td>${label}</td>
+            <td><span class="price-edit" data-type="iks" data-ikskey="${k}" contenteditable>${data.iks[k] ?? ''}</span></td>
+            <td>${iksUnits[k] || ''}</td>
+          </tr>
+        `).join('');
+      }
+
+      const sisBody = document.getElementById('pricesSisBody');
+      if (data.sis) {
+        const c = data.sis.components || {};
+        sisBody.innerHTML = Object.entries(c).map(([k, v]) => `
+          <tr>
+            <td>${v.label}</td>
+            <td><span class="price-edit" data-type="sis" data-sis-comp="${k}" contenteditable>${v.price}</span></td>
+            <td>${v.unit}</td>
+            <td><button class="price-del" data-endpoint="sis/component/${k}" title="Удалить">✕</button></td>
+          </tr>
+        `).join('') + `
+          <tr><td>${data.sis.soundproofLabel}</td><td><span class="price-edit" data-type="sis" data-field="soundproofPrice" contenteditable>${data.sis.soundproofPrice}</span></td><td>₽/м²</td><td></td></tr>
+        `;
+      }
+
+      const wallMatBody = document.getElementById('pricesWallMaterialsBody');
+      const wallInstBody = document.getElementById('pricesWallInstallBody');
+      if (data.walls) {
+        const wm = data.walls.materials;
+        wallMatBody.innerHTML = Object.entries(wm).map(([k, v]) => `
+          <tr>
+            <td>${v.label}</td>
+            <td><span class="price-edit" data-wtype="material" data-wkey="${k}" data-wfield="companyPrice" contenteditable>${v.companyPrice}</span></td>
+            <td><span class="price-edit" data-wtype="material" data-wkey="${k}" data-wfield="clientPrice" contenteditable>${v.clientPrice}</span></td>
+            <td>${v.unit}</td>
+            <td><button class="price-del" data-endpoint="walls/material/${k}" title="Удалить">✕</button></td>
+          </tr>
+        `).join('');
+
+        const wi = data.walls.installation;
+        wallInstBody.innerHTML = Object.entries(wi).map(([k, v]) => `
+          <tr>
+            <td>${v.label}</td>
+            <td><span class="price-edit" data-wtype="install" data-wkey="${k}" data-wfield="companyRate" contenteditable>${v.companyRate}</span></td>
+            <td><span class="price-edit" data-wtype="install" data-wkey="${k}" data-wfield="clientRate" contenteditable>${v.clientRate}</span></td>
+            <td>${v.unit}</td>
+            <td><button class="price-del" data-endpoint="walls/installation/${k}" title="Удалить">✕</button></td>
+          </tr>
+        `).join('');
+      }
+
       const optionsBody = document.getElementById('pricesOptionsBody');
       optionsBody.innerHTML = data.options.map(o => `
         <tr>
           <td>${o.label}</td>
           <td>${o.unit}</td>
           <td><span class="price-edit" data-type="option" data-id="${o.id}" data-field="price" contenteditable>${o.price}</span></td>
+          <td><button class="price-del" data-endpoint="option/${o.id}" title="Удалить">✕</button></td>
         </tr>
       `).join('');
 
+      // ─── Add-row forms ─────────────────────────────────────
+      const makeAddBtn = (label, placeholder, fields, endpoint) => {
+        const btn = document.createElement('button');
+        btn.className = 'price-add';
+        btn.textContent = '+ ' + label;
+        btn.addEventListener('click', () => {
+          const vals = {};
+          fields.forEach(f => { vals[f.key] = prompt(f.label + (f.placeholder ? ' (' + f.placeholder + ')' : ''), f.default || ''); if (!vals[f.key]) return; });
+          if (!vals[fields[0].key]) return;
+          apiFetch('/api/prices/' + endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(vals) })
+            .then(() => loadPrices())
+            .catch(e => alert('Ошибка: ' + e.message));
+        });
+        return btn;
+      };
+
+      document.getElementById('pricesCeilingBody').parentElement.parentElement.after(
+        makeAddBtn('Добавить тип потолка', 'Название', [{ key: 'label', label: 'Название' }, { key: 'pricePerM2', label: 'Цена за м²', default: '0' }], 'ceiling')
+      );
+      document.getElementById('pricesOptionsBody').parentElement.parentElement.after(
+        makeAddBtn('Добавить опцию', 'Название', [{ key: 'label', label: 'Название' }, { key: 'unit', label: 'Ед.изм', default: 'шт' }, { key: 'price', label: 'Цена', default: '0' }], 'option')
+      );
+      document.getElementById('pricesWallMaterialsBody').parentElement.parentElement.after(
+        makeAddBtn('Добавить материал', 'Название', [{ key: 'label', label: 'Название' }, { key: 'unit', label: 'Ед.изм', default: 'м²' }, { key: 'companyPrice', label: 'Себестоимость', default: '0' }, { key: 'clientPrice', label: 'Цена клиенту', default: '0' }], 'walls/material')
+      );
+      document.getElementById('pricesWallInstallBody').parentElement.parentElement.after(
+        makeAddBtn('Добавить работу', 'Название', [{ key: 'label', label: 'Название' }, { key: 'unit', label: 'Ед.изм', default: 'м²' }, { key: 'companyRate', label: 'Себестоимость', default: '0' }, { key: 'clientRate', label: 'Цена клиенту', default: '0' }], 'walls/installation')
+      );
+      document.getElementById('pricesSisBody').parentElement.parentElement.after(
+        makeAddBtn('Добавить компонент СИС', 'Название', [{ key: 'label', label: 'Название' }, { key: 'unit', label: 'Ед.изм', default: 'м' }, { key: 'price', label: 'Цена', default: '0' }], 'sis/component')
+      );
+
+      // ─── Blur save ────────────────────────────────────────
       document.querySelectorAll('.price-edit').forEach(el => {
         el.addEventListener('blur', async function() {
           const newVal = parseFloat(this.textContent.trim());
@@ -274,11 +389,36 @@
           if (type === 'ceiling') url = `/api/prices/ceiling/${id}`;
           else if (type === 'option') url = `/api/prices/option/${id}`;
           else if (type === 'profile') url = `/api/prices/profile`;
+          else if (type === 'sis') {
+            url = `/api/prices/sis`;
+            const comp = this.dataset.sisComp;
+            if (comp) body = { component: comp, price: newVal };
+          }
+          const ikskey = this.dataset.ikskey;
+          if (ikskey) { url = `/api/prices/iks`; body = { [ikskey]: newVal }; }
+          const wtype = this.dataset.wtype;
+          const wkey = this.dataset.wkey;
+          if (wtype === 'material') url = `/api/prices/walls/material/${wkey}`;
+          if (wtype === 'install') url = `/api/prices/walls/installation/${wkey}`;
           try {
-            await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            await apiFetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
           } catch (e) { console.error('Save price error:', e); this.textContent = this.dataset.orig; }
         });
         el.addEventListener('focus', function() { this.dataset.orig = this.textContent; });
+      });
+
+      // ─── Delete buttons ────────────────────────────────────
+      document.querySelectorAll('.price-del').forEach(btn => {
+        btn.addEventListener('click', async function() {
+          const endpoint = this.dataset.endpoint;
+          const row = this.closest('tr');
+          const name = row?.querySelector('td')?.textContent?.trim() || 'эту позицию';
+          if (!confirm(`Удалить «${name}»?`)) return;
+          try {
+            await apiFetch('/api/prices/' + endpoint, { method: 'DELETE' });
+            loadPrices();
+          } catch (e) { alert('Ошибка удаления: ' + e.message); }
+        });
       });
     } catch (e) {
       console.error('Prices load error:', e);

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Панель менеджера — Потолок Пати</title>
+  <title>Панель менеджера — ИКС | СИС</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -13,8 +13,8 @@
     .mgr-sidebar { background: var(--surface-card); border-right: 1px solid var(--border-light); padding: 1.5rem 0; }
     .mgr-sidebar nav { display: flex; flex-direction: column; gap: 0; }
     .mgr-sidebar a { display: block; padding: 0.65rem 1.25rem; font-size: 0.875rem; color: var(--text-secondary); border-left: 3px solid transparent; transition: all 0.15s; }
-    .mgr-sidebar a:hover { color: var(--accent-primary); background: #F8FAFF; }
-    .mgr-sidebar a.active { color: var(--accent-primary); border-left-color: var(--accent-primary); background: #EFF6FF; font-weight: 500; }
+    .mgr-sidebar a:hover { color: var(--accent-primary); background: var(--accent-primary-light); }
+    .mgr-sidebar a.active { color: var(--accent-primary); border-left-color: var(--accent-primary); background: var(--accent-primary-light); font-weight: 500; }
     .mgr-content { padding: 1.5rem 2rem; overflow-y: auto; }
     .mgr-section { display: none; }
     .mgr-section.active { display: block; }
@@ -38,6 +38,10 @@
     .badge-won { background: #F0FDF4; color: var(--accent-success); }
     .price-edit { cursor: text; border-bottom: 1px dashed var(--border-light); padding: 0 2px; }
     .price-edit:focus { outline: none; border-bottom-color: var(--accent-primary); }
+    .price-del { background:none; border:none; color:var(--text-muted); cursor:pointer; padding:2px 6px; border-radius:4px; font-size:13px; transition:all .15s; }
+    .price-del:hover { background:#F7EDED; color:var(--accent-error); }
+    .price-add { display:block; width:100%; padding:8px; margin-top:4px; background:none; border:1px dashed var(--border-light); border-radius:6px; color:var(--text-secondary); font-size:12px; font-weight:500; cursor:pointer; transition:all .15s; font-family:var(--font-sans); }
+    .price-add:hover { border-color:var(--accent-primary); color:var(--accent-primary); background:var(--accent-primary-light); }
     .badge-lost { background: #FEF2F2; color: var(--accent-error); }
 
     .assistant-panel { background: var(--surface-card); border: 1px solid var(--border-light); border-radius: 8px; display: flex; flex-direction: column; height: 450px; }
@@ -69,7 +73,7 @@
 <body>
   <header>
     <div class="container header-inner">
-      <div class="logo">Потолок<span>Пати</span></div>
+      <div class="logo">ИКС <span style="font-weight:400;font-size:0.75rem;color:#94A3B8">| СИС</span></div>
       <nav>
         <a href="/">Главная</a>
         <a href="/calculator.html">Калькулятор</a>
@@ -87,6 +91,7 @@
         <a href="#" data-section="calculator">Сметы</a>
         <a href="#" data-section="prices">Цены</a>
         <a href="#" data-section="assistant">Ассистент</a>
+        <a href="/installer.html" target="_blank" style="border-left-color:var(--green);color:var(--green)">🧱 Натяжные стены</a>
       </nav>
     </aside>
 
@@ -171,9 +176,17 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
           <div>
             <h3 style="font-size:1rem;font-weight:600;margin-bottom:0.75rem;">Типы потолков</h3>
-            <div class="table-wrap"><table><thead><tr><th>Тип</th><th>₽/м²</th><th></th></tr></thead><tbody id="pricesCeilingBody"></tbody></table></div>
+            <div class="table-wrap"><table><thead><tr><th>Тип</th><th>₽/м²</th><th></th><th style="width:32px"></th></tr></thead><tbody id="pricesCeilingBody"></tbody></table></div>
             <h3 style="font-size:1rem;font-weight:600;margin:1rem 0 0.75rem;">Профиль</h3>
             <div class="table-wrap" style="max-width:300px;"><table><thead><tr><th>Тип</th><th>₽/м</th><th></th></tr></thead><tbody id="pricesProfileBody"></tbody></table></div>
+            <h3 style="font-size:1rem;font-weight:600;margin:1rem 0 0.75rem;">СИС (Стены) — компоненты</h3>
+            <div class="table-wrap" style="max-width:480px;"><table><thead><tr><th>Параметр</th><th>Цена</th><th>Ед.</th><th style="width:32px"></th></tr></thead><tbody id="pricesSisBody"></tbody></table></div>
+            <h3 style="font-size:1rem;font-weight:600;margin:1rem 0 0.75rem;">ИКС — цены (СИС расчёт)</h3>
+            <div class="table-wrap" style="max-width:500px;"><table><thead><tr><th>Параметр</th><th>Цена</th><th>Ед.</th></tr></thead><tbody id="pricesIksBody"></tbody></table></div>
+            <h3 style="font-size:1rem;font-weight:600;margin:1rem 0 0.75rem;">Стены — материалы (себест / клиент)</h3>
+            <div class="table-wrap"><table><thead><tr><th>Материал</th><th>Себест.</th><th>Клиенту</th><th>Ед.</th><th style="width:32px"></th></tr></thead><tbody id="pricesWallMaterialsBody"></tbody></table></div>
+            <h3 style="font-size:1rem;font-weight:600;margin:1rem 0 0.75rem;">Стены — монтаж (себест / клиент)</h3>
+            <div class="table-wrap"><table><thead><tr><th>Работа</th><th>Себест.</th><th>Клиенту</th><th>Ед.</th><th style="width:32px"></th></tr></thead><tbody id="pricesWallInstallBody"></tbody></table></div>
           </div>
           <div>
             <h3 style="font-size:1rem;font-weight:600;margin-bottom:0.75rem;">Дополнительные опции</h3>
