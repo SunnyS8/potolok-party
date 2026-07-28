@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход — ИКС | СИС</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        :root {
+          --bg-base: #F8F7F4;
+          --text-primary: #2D2A24;
+          --text-secondary: #8A8580;
+          --surface-card: #FFFFFF;
+          --border-light: #EAE8E3;
+          --border-medium: #D6D3CD;
+          --accent-primary: #5B8A8C;
+          --accent-primary-hover: #4D7A7C;
+          --shadow-card: 0 1px 3px rgba(45,42,36,0.04), 0 1px 2px rgba(45,42,36,0.03);
+          --radius-md: 10px;
+          --radius-lg: 16px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-base); color: var(--text-primary);
+            display: flex; align-items: center; justify-content: center;
+            min-height: 100vh;
+        }
+        .login-card {
+            background: var(--surface-card); border-radius: var(--radius-lg);
+            padding: 48px 40px; width: 400px; max-width: 90vw;
+            box-shadow: var(--shadow-card);
+            text-align: center;
+        }
+        .login-card .logo { font-size: 22px; font-weight: 700; margin-bottom: 24px; }
+        .login-card .logo span { color: var(--accent-primary); }
+        .login-card h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+        .login-card p { font-size: 14px; color: var(--text-secondary); margin-bottom: 32px; }
+        .login-card input {
+            width: 100%; padding: 12px 16px; font-size: 16px;
+            border: 1px solid var(--border-medium); border-radius: var(--radius-md);
+            outline: none; margin-bottom: 20px;
+            font-family: inherit; color: var(--text-primary);
+        }
+        .login-card input:focus { border-color: var(--accent-primary); box-shadow: 0 0 0 3px rgba(91,138,140,0.1); }
+        .login-card button {
+            width: 100%; padding: 12px; font-size: 16px; font-weight: 600;
+            background: var(--accent-primary); color: white; border: none;
+            border-radius: var(--radius-md); cursor: pointer; transition: background 0.2s;
+        }
+        .login-card button:hover { background: var(--accent-primary-hover); }
+        .login-card .hint { font-size: 12px; color: var(--text-secondary); margin-top: 16px; }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="logo">ИКС <span>| СИС</span></div>
+        <h1>Вход в систему</h1>
+        <p>Введите номер телефона, чтобы войти</p>
+        <form id="loginForm" action="/manager.html">
+            <input type="tel" placeholder="+7 (999) 123-45-67" pattern="[\+]\d{1}\s?[\(]\d{3}[\)]\s?\d{3}[\-]\d{2}[\-]\d{2}" required>
+            <button type="submit">Войти</button>
+            <div class="hint">Для демо-доступа используйте любой номер</div>
+        </form>
+    </div>
+</body>
+</html>

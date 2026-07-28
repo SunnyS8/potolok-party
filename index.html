@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ИКС | СИС — Чертёжный калькулятор стен</title>
+  <link rel="stylesheet" href="styles.css?v=20260709-05">
+  <link rel="stylesheet" href="styles-unfold.css?v=20260709-05">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" style="background:var(--accent,#5B8A8C)">И</span><div><strong>ИКС</strong><small>СИС — Система Идеальных Стен</small></div></div>
+    <div class="project-name">
+      <span class="status-dot"></span>
+      <select id="projectSelect" aria-label="Проект"></select>
+      <input id="projectName" value="Новый проект" aria-label="Название проекта">
+      <input id="addressName" class="address-input" value="" placeholder="Адрес" aria-label="Адрес">
+      <input id="roomName" class="room-input" value="" placeholder="Помещение" aria-label="Помещение">
+    </div>
+    <div class="top-actions">
+      <button class="ghost" id="newProject">+ Проект</button>
+      <button class="ghost project-extra" id="duplicateProject">Копия</button>
+      <button class="ghost project-extra danger-button" id="deleteProject">Удалить</button>
+      <button class="ghost" id="saveBtn">Сохранить</button>
+      <button class="primary" id="printBtn">Смета PDF</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div><p class="eyebrow">Чертёжный калькулятор</p><h1>От контура комнаты<br>до точной комплектации</h1></div>
+      <div class="hero-stats">
+        <div><span>Площадь стен</span><strong id="heroArea">—</strong></div>
+        <div><span>Материал</span><strong id="heroMaterial">—</strong></div>
+        <div class="accent-stat"><span>Материалы + монтаж</span><strong id="heroRetail">—</strong></div>
+      </div>
+    </section>
+
+    <div class="workspace">
+      <section class="drawing-card card">
+        <div class="card-head">
+          <div><p class="step">01 · Геометрия</p><h2 id="drawingTitle">Прямая развёртка стен</h2></div>
+          <div class="drawing-actions">
+            <button id="addWall">+ Стена</button>
+            <button id="removeWall">− Стена</button>
+            <button id="newDrawing">Новый чертёж</button>
+            <button id="toggle3d">▱ 3D-развёртка</button>
+            <button id="fullscreenDrawing">⛶ На весь экран</button>
+            <button id="photoDrawing">Фото → чертёж</button>
+            <input id="photoInput" type="file" accept="image/*,.heic,.heif" hidden>
+          </div>
+        </div>
+        <div class="view-switch">
+          <button data-view="unfold" class="active">Прямая развёртка</button>
+          <button data-view="plan">План помещения</button>
+        </div>
+        <div class="geometry-workflow" id="geometryWorkflow">
+          <div><strong>Сначала геометрия помещения</strong><small>Постройте замкнутый периметр, затем задайте высоту и создайте развёртку.</small></div>
+          <label>Высота, м<input id="planHeight" type="number" min=".1" step=".05" value="2.70"></label>
+          <label class="orthogonal-toggle"><input id="orthogonalMode" type="checkbox" checked> Углы 90°</label>
+          <button id="createUnfoldFromPlan" class="dark">Создать развёртку</button>
+          <button id="createSingleWall">Одна стена</button>
+        </div>
+        <div class="scope-switch" id="scopeSwitch">
+          <button data-scope="all" class="active">Весь чертёж</button>
+          <button data-scope="selected">Выделенная стена</button>
+          <button id="previousWall" aria-label="Предыдущая стена">←</button>
+          <span id="selectedWallLabel">Стена 1</span>
+          <button id="nextWall" aria-label="Следующая стена">→</button>
+        </div>
+        <div class="work-options">
+          <label class="toggle mini-toggle"><input type="checkbox" id="calcSelectedOnly"><span></span>Смета только выбранной стены</label>
+          <label class="toggle mini-toggle"><input type="checkbox" id="showAllDims"><span></span>Показывать размеры объектов</label>
+        </div>
+        <div class="warnings-panel" id="warningsPanel" hidden></div>
+        <div class="photo-toolbar" id="photoToolbar" hidden>
+          <div><strong>Обведите только стены</strong><small>Кликайте по углам стен, мебель и предметы пропускайте</small></div>
+          <label>Длина первого участка, м<input id="photoReferenceLength" type="number" min=".1" step=".05" value="3"></label>
+          <button id="photoUndo">Отменить точку</button>
+          <button id="photoFinish" class="dark">Создать развёртку</button>
+        </div>
+        <div class="canvas-wrap">
+          <svg id="drawing" viewBox="0 0 760 520" aria-label="Чертёж помещения">
+            <defs>
+              <pattern id="smallGrid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#dce2e0" stroke-width="1"/></pattern>
+              <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse"><rect width="100" height="100" fill="url(#smallGrid)"/><path d="M 100 0 L 0 0 0 100" fill="none" stroke="#c7cecb" stroke-width="1.2"/></pattern>
+              <pattern id="draftHatch" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(62)"><line x1="0" y1="0" x2="0" y2="9" stroke="#a8b6b1" stroke-width="1"/></pattern>
+              <pattern id="blueDraftHatch" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(62)"><line x1="0" y1="0" x2="0" y2="9" stroke="#9cc7e5" stroke-width="1"/></pattern>
+              <pattern id="glassHatch" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="12" stroke="#b8c3c0" stroke-width="1"/></pattern>
+              <filter id="shadow"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-opacity=".16"/></filter>
+            </defs>
+            <rect width="760" height="520" fill="url(#grid)"/>
+            <g id="shapeLayer"></g>
+          </svg>
+          <div class="scale">1 клетка = 0,25 м</div>
+          <div class="canvas-tip" id="canvasTip">Тяните точки для изменения размеров</div>
+          <div class="zoom-controls">
+            <button id="zoomOut" aria-label="Уменьшить">−</button>
+            <button id="zoomReset">100%</button>
+            <button id="zoomIn" aria-label="Увеличить">+</button>
+          </div>
+        </div>
+        <div class="wall-editor" id="wallEditor"></div>
+        <div class="fullscreen-tools" id="fullscreenTools">
+          <div class="fs-tool-title"><strong>Объекты стены</strong><small>Выберите стену и добавьте объект</small></div>
+          <div class="fs-object-buttons">
+            <button data-fs-add="door">Дверь</button>
+            <button data-fs-add="window">Окно</button>
+            <button data-fs-add="battery">Батарея</button>
+            <button data-fs-add="tv">ТВ-зона</button>
+            <button data-fs-add="socket">Розетка</button>
+            <button data-fs-add="switch">Выключатель</button>
+            <button data-fs-add="slopeWindow">Откос окна</button>
+            <button data-fs-add="slopeBalcony">Откос балкона</button>
+            <button data-fs-add="balconyRight">Балкон →</button>
+            <button data-fs-add="balconyLeft">← Балкон</button>
+            <button data-fs-add="balconyDouble">Окно·дверь·окно</button>
+            <button data-fs-add="columnRect">Колонна</button>
+            <button data-fs-add="columnRound">Круглая колонна</button>
+            <button data-fs-add="beam">Балка</button>
+            <button data-fs-add="boxNiche">Короб/ниша</button>
+            <button data-add-box-layout="top">Короб сверху</button>
+            <button data-add-box-layout="niche">Ниша внутри</button>
+            <button data-fs-add="cutout">Вырез</button>
+          </div>
+          <div class="fs-object-editor" id="fsObjectEditor" hidden>
+            <label>Тип<select id="fsOpeningType"><option value="door">Дверь</option><option value="window">Окно</option><option value="battery">Обход батареи</option><option value="tv">Закладная под ТВ</option><option value="socket">Закладная под розетку</option><option value="switch">Выключатель</option><option value="slopeWindow">Откос окна</option><option value="slopeBalcony">Откос балкона</option><option value="balconyRight">Дверь + окно справа</option><option value="balconyLeft">Окно слева + дверь</option><option value="balconyDouble">Окно + дверь + окно</option><option value="columnRect">Колонна прямоугольная</option><option value="columnRound">Колонна круглая</option><option value="beam">Балка</option><option value="boxNiche">Короб/ниша</option><option value="cutout">Вырез</option></select></label>
+            <label>Ширина<input id="fsOpeningWidth" type="number" min=".1" step=".05"></label>
+            <label>Высота<input id="fsOpeningHeight" type="number" min=".1" step=".05"></label>
+            <label>Слева<input id="fsOpeningLeft" type="number" min="0" step=".05"></label>
+            <label>От пола<input id="fsOpeningBottom" type="number" min="0" step=".05"></label>
+            <label>Количество<input id="fsOpeningCount" type="number" min="1" max="8" step="1"></label>
+            <label>Глубина/вынос<input id="fsOpeningDepth" type="number" min="0" step=".05"></label>
+            <label>Обработка<select id="fsOpeningTreatment"><option value="bypass">Обойти профилем</option><option value="cover">Затянуть элемент</option><option value="cutout">Вырезать из площади</option><option value="mark">Только отметить</option></select></label>
+            <label id="fsBoxLayoutLabel">Конструкция<select id="fsBoxLayout"><option value="free">Свободный короб</option><option value="top">Короб сверху</option><option value="niche">Ниша внутри стены</option></select></label>
+            <label>Ширина двери<input id="fsBalconyDoorWidth" type="number" min=".5" step=".05"></label>
+            <label>Высота окна<input id="fsBalconyWindowHeight" type="number" min=".3" step=".05"></label>
+            <label>Высота подоконника<input id="fsBalconySill" type="number" min="0" step=".05"></label>
+            <label id="fsBalconySillDepthLabel">Вынос подоконника<input id="fsBalconySillDepth" type="number" min="0" step=".05"></label>
+            <label id="fsBalconySlopeDepthLabel">Глубина откосов<input id="fsBalconySlopeDepth" type="number" min="0" step=".05"></label>
+            <label class="fs-cover" id="fsBalconySillToggleLabel"><input id="fsBalconyHasSill" type="checkbox"> Подоконник у окна</label>
+            <label class="fs-cover" id="fsBalconySlopesLabel"><input id="fsBalconySlopes" type="checkbox"> Добавить откосы</label>
+            <label id="fsWindowPanelsLabel">Створки окна<input id="fsWindowPanels" type="number" min="1" max="6" step="1"></label>
+            <label id="fsWindowSillDepthLabel">Подоконник, м<input id="fsWindowSillDepth" type="number" min="0" step=".05"></label>
+            <label id="fsWindowSlopeDepthLabel">Глубина откосов<input id="fsWindowSlopeDepth" type="number" min="0" step=".05"></label>
+            <label class="fs-cover" id="fsWindowSillLabel"><input id="fsWindowSill" type="checkbox"> Показать подоконник</label>
+            <label class="fs-cover" id="fsWindowSlopesLabel"><input id="fsWindowSlopes" type="checkbox"> Добавить откосы</label>
+            <label class="fs-cover"><input id="fsCoverDoor" type="checkbox"> Затянуть дверь</label>
+            <button id="fsRemoveOpening" class="fs-delete">Удалить</button>
+          </div>
+        </div>
+        <div class="legend"><span><i class="line wall"></i>Стена</span><span><i class="dot internal"></i>Внутренний угол</span><span><i class="dot external"></i>Внешний угол</span></div>
+        <div class="profile-legend" id="profileLegend"></div>
+      </section>
+
+      <aside class="settings">
+        <section class="card compact">
+          <p class="step">02 · Параметры</p><h2>Стены и проёмы</h2>
+          <div class="form-grid">
+            <label>Высота стен, м<input type="number" id="height" min="0.1" step="0.05" value="2.70"></label>
+            <label>Запас материала, %<input type="number" id="reserve" min="0" step="1" value="10"></label>
+            <label>Площадь проёмов, м²<input type="number" id="openingsArea" value="0" readonly></label>
+            <label>Периметр проёмов, м<input type="number" id="openingsPerimeter" value="0" readonly></label>
+            <label>Свободные торцы, м<input type="number" id="freeEdges" min="0" step="0.1" value="0"></label>
+            <label>Доп. разделители, м<input type="number" id="dividerLength" min="0" step="0.1" value="0"></label>
+          </div>
+        </section>
+
+        <section class="card compact">
+          <p class="step">03 · Система</p><h2>Профили и заполнение</h2>
+          <label class="select-label">Верх стены<select id="topProfile"><option value="ceiling">Потолочный профиль</option><option value="base">Базовый профиль</option><option value="none">Без профиля</option></select></label>
+          <label class="select-label">Низ стены<select id="bottomProfile"><option value="shadow">Теневой профиль</option><option value="ceiling">Потолочный под плинтус</option><option value="base">Базовый профиль</option><option value="none">Без профиля</option></select></label>
+          <label class="select-label">Подложка по умолчанию для всех стен<select id="material"><option value="heavy" selected>Tönlos Heavy Felt</option><option value="acoustic">Tönlos Acoustic Felt</option><option value="fintek">Fintek 150</option><option value="none">Без подложки</option></select></label>
+          <small class="field-help">Для отдельной стены материал можно изменить в карточке стены.</small>
+          <label class="select-label">Разделитель при размере больше 3,05 м<select id="dividerMode"><option value="horizontal">Горизонтально</option><option value="vertical">Вертикально</option><option value="none">Не добавлять автоматически</option></select></label>
+          <label class="toggle"><input type="checkbox" id="useGlue" checked><span></span>Добавить клей Tönlos</label>
+        </section>
+
+        <section class="card compact">
+          <p class="step">04 · Монтаж</p><h2>Ставки работ</h2>
+          <label class="toggle"><input type="checkbox" id="includeInstall" checked><span></span>Добавить монтаж в смету</label>
+          <div class="install-rate-grid">
+            <strong>Монтажникам</strong><strong>Клиенту</strong>
+            <label>Стандартная стена, м²<input id="installWallCompany" type="number" min="0" step="50" value="400"></label>
+            <label><span class="sr-only">Стандартная стена клиенту</span><input id="installWallClient" type="number" min="0" step="50" value="850"></label>
+            <label>Подложка, м²<input id="installUnderlayCompany" type="number" min="0" step="10" value="150"></label>
+            <label><span class="sr-only">Подложка клиенту</span><input id="installUnderlayClient" type="number" min="0" step="10" value="350"></label>
+            <label>Доп. профиль, м.п<input id="installProfileCompany" type="number" min="0" step="10" value="80"></label>
+            <label><span class="sr-only">Доп. профиль клиенту</span><input id="installProfileClient" type="number" min="0" step="10" value="180"></label>
+            <label>Дверь/окно, шт<input id="installOpeningCompany" type="number" min="0" step="50" value="250"></label>
+            <label><span class="sr-only">Дверь/окно клиенту</span><input id="installOpeningClient" type="number" min="0" step="50" value="650"></label>
+            <label>Балконный блок, шт<input id="installBalconyCompany" type="number" min="0" step="50" value="400"></label>
+            <label><span class="sr-only">Балкон клиенту</span><input id="installBalconyClient" type="number" min="0" step="50" value="1000"></label>
+            <label>Откос, шт<input id="installSlopeCompany" type="number" min="0" step="50" value="300"></label>
+            <label><span class="sr-only">Откос клиенту</span><input id="installSlopeClient" type="number" min="0" step="50" value="750"></label>
+            <label>Затяжка двери, шт<input id="installDoorCoverCompany" type="number" min="0" step="50" value="350"></label>
+            <label><span class="sr-only">Затяжка двери клиенту</span><input id="installDoorCoverClient" type="number" min="0" step="50" value="900"></label>
+            <label>Закладные, шт<input id="installEmbedCompany" type="number" min="0" step="50" value="100"></label>
+            <label><span class="sr-only">Закладные клиенту</span><input id="installEmbedClient" type="number" min="0" step="50" value="300"></label>
+            <label>Колонна, шт<input id="installColumnCompany" type="number" min="0" step="50" value="500"></label>
+            <label><span class="sr-only">Колонна клиенту</span><input id="installColumnClient" type="number" min="0" step="50" value="1200"></label>
+            <label>Круглая колонна, шт<input id="installRoundColumnCompany" type="number" min="0" step="50" value="700"></label>
+            <label><span class="sr-only">Круглая колонна клиенту</span><input id="installRoundColumnClient" type="number" min="0" step="50" value="1600"></label>
+            <label>Балка, шт<input id="installBeamCompany" type="number" min="0" step="50" value="450"></label>
+            <label><span class="sr-only">Балка клиенту</span><input id="installBeamClient" type="number" min="0" step="50" value="1000"></label>
+            <label>Короб/ниша, шт<input id="installBoxCompany" type="number" min="0" step="50" value="500"></label>
+            <label><span class="sr-only">Короб клиенту</span><input id="installBoxClient" type="number" min="0" step="50" value="1200"></label>
+            <label>Доплата высоты, %<input id="installHeightCompany" type="number" min="0" step="1" value="10"></label>
+            <label><span class="sr-only">Доплата высоты клиенту</span><input id="installHeightClient" type="number" min="0" step="1" value="15"></label>
+          </div>
+        </section>
+
+        <section class="card compact openings-card">
+          <div class="openings-head"><div><p class="step">05 · Объекты</p><h2>Проёмы и закладные</h2></div></div>
+          <div class="opening-actions">
+            <button data-add-opening="door">+ Дверь</button>
+            <button data-add-opening="window">+ Окно</button>
+            <button data-add-opening="cutout">+ Вырез</button>
+            <button data-add-opening="battery">+ Батарея</button>
+            <button data-add-opening="tv">+ Закладная ТВ</button>
+            <button data-add-opening="socket">+ Розетка</button>
+            <button data-add-opening="switch">+ Выключатель</button>
+            <button data-add-opening="slopeWindow">+ Откос окна</button>
+            <button data-add-opening="slopeBalcony">+ Откос балкона</button>
+            <button data-add-opening="balconyRight">+ Балкон →</button>
+            <button data-add-opening="balconyLeft">+ ← Балкон</button>
+            <button data-add-opening="balconyDouble">+ Окно·дверь·окно</button>
+            <button data-add-opening="columnRect">+ Колонна</button>
+            <button data-add-opening="columnRound">+ Круглая колонна</button>
+            <button data-add-opening="beam">+ Балка</button>
+            <button data-add-opening="boxNiche">+ Короб/ниша</button>
+            <button data-add-box-layout="top">+ Короб сверху</button>
+            <button data-add-box-layout="niche">+ Ниша внутри</button>
+          </div>
+          <div id="openingEmpty" class="empty-note">Выберите стену и добавьте объект</div>
+          <div class="object-list" id="objectList"></div>
+          <div id="openingEditor" hidden>
+            <label class="select-label">Тип<select id="openingType"><option value="door">Дверь</option><option value="window">Окно</option><option value="cutout">Вырез</option><option value="battery">Обход батареи</option><option value="tv">Закладная под ТВ</option><option value="socket">Закладная под розетку</option><option value="switch">Выключатель</option><option value="slopeWindow">Откос окна</option><option value="slopeBalcony">Откос балкона</option><option value="balconyRight">Дверь + окно справа</option><option value="balconyLeft">Окно слева + дверь</option><option value="balconyDouble">Окно + дверь + окно</option><option value="columnRect">Колонна прямоугольная</option><option value="columnRound">Колонна круглая</option><option value="beam">Балка</option><option value="boxNiche">Короб/ниша</option></select></label>
+            <div class="form-grid">
+              <label>Ширина, м<input type="number" id="openingWidth" min="0.1" step="0.05"></label>
+              <label>Высота, м<input type="number" id="openingHeight" min="0.1" step="0.05"></label>
+              <label>Отступ слева, м<input type="number" id="openingLeft" min="0" step="0.05"></label>
+              <label>Отступ от пола, м<input type="number" id="openingBottom" min="0" step="0.05"></label>
+              <label>Количество в блоке<input type="number" id="openingCount" min="1" max="8" step="1"></label>
+            </div>
+            <div class="complex-fields form-grid" id="complexFields" hidden>
+              <label>Глубина/вынос, м<input type="number" id="openingDepth" min="0" step="0.05"></label>
+              <label>Обработка<select id="openingTreatment"><option value="bypass">Обойти профилем</option><option value="cover">Затянуть элемент</option><option value="cutout">Вырезать из площади</option><option value="mark">Только отметить</option></select></label>
+              <label id="boxLayoutLabel">Конструкция<select id="boxLayout"><option value="free">Свободный короб</option><option value="top">Горизонтальный короб сверху</option><option value="niche">Ниша внутри стены</option></select></label>
+            </div>
+            <div class="balcony-fields form-grid" id="balconyFields" hidden>
+              <label>Ширина двери, м<input type="number" id="balconyDoorWidth" min=".5" step=".05"></label>
+              <label>Высота окна, м<input type="number" id="balconyWindowHeight" min=".3" step=".05"></label>
+              <label>Высота подоконника, м<input type="number" id="balconySill" min="0" step=".05"></label>
+              <label>Вынос подоконника, м<input type="number" id="balconySillDepth" min="0" step=".05"></label>
+              <label>Глубина откосов, м<input type="number" id="balconySlopeDepth" min="0" step=".05"></label>
+              <label class="wide-toggle"><input type="checkbox" id="balconyHasSill"> Подоконник у оконной части</label>
+              <label class="wide-toggle"><input type="checkbox" id="balconySlopes"> Применить откосы к балконному блоку</label>
+            </div>
+            <div class="window-fields form-grid" id="windowFields" hidden>
+              <label>Количество створок<input type="number" id="windowPanels" min="1" max="6" step="1"></label>
+              <label>Глубина откосов, м<input type="number" id="windowSlopeDepth" min="0" step=".05"></label>
+              <label class="wide-toggle"><input type="checkbox" id="windowSill"> Подоконник</label>
+              <label>Вынос подоконника, м<input type="number" id="windowSillDepth" min="0" step=".05"></label>
+              <label class="wide-toggle"><input type="checkbox" id="windowSlopes"> Применить откосы к этому окну</label>
+            </div>
+            <label class="door-cover-toggle"><input type="checkbox" id="coverDoor"> Затянуть дверь полотном</label>
+            <button class="danger-link" id="removeOpening">Удалить объект</button>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <section class="results card">
+      <div class="card-head">
+        <div><p class="step">05 · Комплектация</p><h2>Материалы и стоимость</h2></div>
+        <div class="price-switch" role="tablist">
+          <button data-price="cost">Себестоимость</button>
+          <button data-price="installer">Монтажникам</button>
+          <button data-price="retail" class="active">Розница</button>
+        </div>
+      </div>
+      <div class="summary-strip">
+        <div><span>Режим сметы</span><strong id="estimateModeValue">Весь проект</strong></div>
+        <div><span>Периметр</span><strong id="perimeterValue">0 м</strong></div>
+        <div><span id="floorMetricLabel">Сумма ширин стен</span><strong id="floorAreaValue">0 м</strong></div>
+        <div><span>Внутр. / внеш. углы</span><strong id="cornersValue">0 / 0</strong></div>
+        <div><span>Площадь стен с запасом</span><strong id="wallAreaValue">0 м²</strong></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Позиция</th><th>Расчёт</th><th>К закупке</th><th>Цена за ед.</th><th>Сумма</th></tr></thead>
+          <tbody id="materialsBody"></tbody>
+          <tfoot>
+            <tr><td colspan="4" id="grandTotalLabel">Итого: материалы + работа</td><td id="grandTotal">0 ₽</td></tr>
+            <tr class="unit-total"><td colspan="4">Материалы + работа за 1 м² фактической площади</td><td id="squareMeterTotal">0 ₽/м²</td></tr>
+            <tr class="unit-total"><td colspan="4">Маржа с учётом зарплаты монтажников</td><td id="marginTotal">0 ₽</td></tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+    <section class="install card">
+      <div class="card-head">
+        <div><p class="step">06 · Монтаж</p><h2>Работы: подрядчик и клиент</h2></div>
+        <div class="effective-price"><span>Маржа по монтажу</span><strong id="installMarginTotal">0 ₽</strong></div>
+      </div>
+      <div class="summary-strip install-summary">
+        <div><span>Компания платит монтажникам</span><strong id="installCompanyTotal">0 ₽</strong></div>
+        <div><span>Клиенту за монтаж</span><strong id="installClientTotal">0 ₽</strong></div>
+        <div><span>Монтаж / м²</span><strong id="installMeterTotal">0 ₽/м²</strong></div>
+        <div><span>Материалы + монтаж клиенту</span><strong id="projectClientTotal">0 ₽</strong></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Работа</th><th>Объём</th><th>Ставка монтажникам</th><th>Цена клиенту</th><th>Маржа</th></tr></thead>
+          <tbody id="installBody"></tbody>
+        </table>
+      </div>
+      <p class="install-note">Ставки — стартовые ориентиры. Их можно менять под вашу экономику: левая колонка — сколько компания платит монтажникам/подрядчику, правая — сколько выставляется заказчику.</p>
+    </section>
+
+    <section class="bom card">
+      <div class="card-head">
+        <div><p class="step">07 · Ведомость</p><h2>Количество материалов и раскрой обоев</h2></div>
+        <div class="effective-price"><span>Обои с учётом отходов</span><strong id="wallpaperEffectivePrice">0 ₽/факт. м²</strong></div>
+      </div>
+      <div class="bom-grid">
+        <div>
+          <h3>Сводная комплектация</h3>
+          <table class="compact-table">
+            <thead><tr><th>Материал</th><th>Фактически</th><th>Заказать</th></tr></thead>
+            <tbody id="bomBody"></tbody>
+          </table>
+        </div>
+        <div>
+          <h3>Карта отрезов обоев</h3>
+          <table class="compact-table">
+            <thead><tr><th>Стена</th><th>Факт. размер</th><th>Отрез</th><th>Площадь</th></tr></thead>
+            <tbody id="cutsBody"></tbody>
+            <tfoot><tr><td colspan="3">Всего обоев к закупке</td><td id="cutsTotal">0 м²</td></tr></tfoot>
+          </table>
+          <p class="cut-note">Каждый отрез: ширина полотна 3,20 м; к длине стены добавляется по 0,10 м с двух сторон.</p>
+        </div>
+      </div>
+      <div class="offsets-block">
+        <h3>Техническая карта размеров и отступов</h3>
+        <div class="table-wrap offsets-wrap">
+          <table class="compact-table">
+            <thead><tr><th>Объект</th><th>Стена</th><th>Размер Ш×В</th><th>Слева</th><th>Справа</th><th>От пола</th><th>До потолка</th></tr></thead>
+            <tbody id="offsetsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast">Проект сохранён в браузере</div>
+  <script src="app.js?v=20260709-05"></script>
+</body>
+</html>
