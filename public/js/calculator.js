@@ -187,58 +187,53 @@ async function calcWalls() {
   const color = document.querySelector('#tab-walls .color-opt.active')?.dataset.color || 'Белый мат';
 
   const height = perimeter > 0 ? area / perimeter : 2.7;
-  const w = perimeter / 4;
   const body = {
     height: roundTo(height, 2),
-    wastePercent: 10,
-    walls: [
-      { width: w, height: roundTo(height, 2), objects: [] },
-      { width: w, height: roundTo(height, 2), objects: [] },
-      { width: w, height: roundTo(height, 2), objects: [] },
-      { width: w, height: roundTo(height, 2), objects: [] },
-    ]
+    perimeter,
+    wallArea: area,
+    soundproof,
+    paintable,
+    color,
+    rollWidth: 3.2,
+    sockets: [],
+    includeGlue: true,
+    includeSpray: false,
   };
 
   const res = await fetch('/api/walls/calculate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
   });
   const data = await res.json();
-  if (!data.pricing) throw new Error('Empty response');
+  if (data.error) throw new Error(data.error || 'Ошибка расчёта');
 
-  try {
-    await fetch('/api/calculator', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ceilingType: 'Система Идеальных Стен (СИС)',
-        area, source: 'walls_calc', skipAI: true,
-        options: []
-      })
+  const resultNode = document.getElementById('result');
+  const html = [];
+  html.push('<div style="margin-bottom:18px;padding:18px;background:#F8FAFC;border-radius:16px;border:1px solid #E2E8F0;">');
+  html.push('<div style="font-size:14px;color:#475569;margin-bottom:10px;">Стены</div>');
+  html.push('<div style="display:grid;grid-template-columns:1fr auto;gap:10px;font-size:14px;color:#334155;line-height:1.75;">');
+  html.push('<div>Площадь стен:</div><div>' + fmt(data.wallArea) + ' м²</div>');
+  html.push('<div>Периметр:</div><div>' + fmt(data.perimeter) + ' м</div>');
+  html.push('<div>Высота:</div><div>' + fmt(data.height) + ' м</div>');
+  html.push('<div>Рулонов:</div><div>' + fmt(data.summary?.rollCount || 0) + '</div>');
+  html.push('<div>Итого:</div><div><strong>' + fmt(data.totalClient) + ' ₽</strong></div>');
+  html.push('</div></div>');
+
+  if (Array.isArray(data.materials) && data.materials.length) {
+    html.push('<div style="font-size:13px;color:#475569;line-height:1.75;padding:0 2px;">');
+    data.materials.slice(0, 5).forEach(m => {
+      html.push('<div>' + escapeHtml(m.name) + ': ' + fmt(m.quantity) + ' ' + escapeHtml(m.unit) + ' × ' + fmt(m.unitPrice) + ' ₽ = <strong>' + fmt(m.total) + ' ₽</strong></div>');
     });
-  } catch (e) {}
+    if (data.materials.length > 5) {
+      html.push('<div style="margin-top:8px;color:#64748B;">...ещё ' + (data.materials.length - 5) + ' позиций</div>');
+    }
+    html.push('</div>');
+  }
 
-  const p = data.pricing;
-  const m = data.materials;
-
-  let html = '<div class="sis-price">' + fmt(p.totalClient) + ' ₽</div>';
-  html += '<div style="font-size:13px;color:#6B7280;line-height:1.8;text-align:left;padding:0 4px">';
-  html += '<div>🧵 ' + m.fabric.name + ': ' + fmt(m.fabric.quantity) + ' ' + m.fabric.unit + ' × ' + fmt(m.fabric.clientPrice) + ' ₽ = <strong>' + fmt(m.fabric.totalClient) + ' ₽</strong></div>';
-  html += '<div>📐 ' + m.topProfile.name + ': ' + fmt(m.topProfile.quantity) + ' ' + m.topProfile.unit + ' × ' + fmt(m.topProfile.clientPrice) + ' ₽ = <strong>' + fmt(m.topProfile.totalClient) + ' ₽</strong></div>';
-  html += '<div>📐 ' + m.bottomProfile.name + ': ' + fmt(m.bottomProfile.quantity) + ' ' + m.bottomProfile.unit + ' × ' + fmt(m.bottomProfile.clientPrice) + ' ₽ = <strong>' + fmt(m.bottomProfile.totalClient) + ' ₽</strong></div>';
-  const ratePerM2 = data.summary.netArea > 0 ? p.installCostClient / data.summary.netArea : 0;
-  html += '<div>🔧 Монтаж полотна: ' + fmt(data.summary.netArea) + ' м² × ' + fmt(ratePerM2) + ' ₽ = <strong>' + fmt(p.installCostClient) + ' ₽</strong></div>';
-  html += '<div>📦 Подложка: ' + fmt(m.substrate.quantity) + ' ' + m.substrate.unit + ' × ' + fmt(m.substrate.clientPrice) + ' ₽ = <strong>' + fmt(m.substrate.totalClient) + ' ₽</strong></div>';
-  html += '<div>🧴 Клей: ' + fmt(m.adhesive.quantity) + ' ' + m.adhesive.unit + ' = <strong>' + fmt(m.adhesive.totalClient) + ' ₽</strong></div>';
-  if (paintable) html += '<div>🖌️ Полотно под покраску</div>';
-  html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #E5E7EB;font-size:11px;color:#9CA3AF">Высота: ' + height.toFixed(2) + ' м · Цвет профиля: ' + color + ' · Срок монтажа: 1–3 дня</div>';
-  html += '</div>';
-  document.getElementById('result').innerHTML = html;
-  document.getElementById('result').classList.add('show');
-  const sp = document.querySelector('.sis-price');
-  if (sp) setTimeout(() => sp.classList.add('price-total-anim'), 100);
-  showUpgrades(p.totalClient);
+  resultNode.innerHTML = html.join('');
+  resultNode.classList.add('show');
+  showUpgrades(data.totalClient);
 }
 
 async function calcCombined() {
@@ -286,7 +281,7 @@ async function calcCombined() {
   html += '</div>';
 
   html += '<div style="background:#F9FAFB;border-radius:12px;padding:16px">';
-  html += '<h3 style="font-size:1rem;font-weight:600;margin-bottom:8px">🧱 Стены (СИС)</h3>';
+  html += '<h3 style="font-size:1rem;font-weight:600;margin-bottom:8px">🧱 Стены</h3>';
   html += '<div>' + fmt(data.walls.area) + ' м²</div>';
   html += '<div>материалы + монтаж</div>';
   html += '<div style="font-size:1.1rem;font-weight:700;margin-top:4px">' + fmt(data.walls.total) + ' ₽</div>';

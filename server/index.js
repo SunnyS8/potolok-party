@@ -13,6 +13,7 @@ const assistant = require('./assistant');
 const analytics = require('./analytics');
 const prices = require('./prices');
 const wallsCalc = require('./walls');
+const iks = require('./iks-calculator');
 const combinedCalc = require('./combined');
 const exp = require('./export');
 const clientCabinet = require('./client');
@@ -42,14 +43,14 @@ function requireAuth(req, res, next) {
 }
 
 const app = express();
+
+app.get(['/drawing', '/drawing/'], (req, res) => res.redirect(301, '/calculator.html'));
+app.get('/drawing/*', (req, res) => res.redirect(301, '/calculator.html'));
+app.get(['/calculator', '/calculator/'], (req, res) => res.redirect(301, '/calculator.html'));
+
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
-
-// Расширенный калькулятор (React SPA)
-app.use('/drawing', express.static(path.join(__dirname, '..', 'public', 'drawing')));
-
-app.use('/calculator', express.static(path.join(__dirname, '..', 'public', 'calculator')));
 
 // Защита панели менеджера
 if (AUTH_TOKEN) {
@@ -217,8 +218,47 @@ app.post('/api/calculator/quote', async (req, res) => {
 
 app.post('/api/walls/calculate', (req, res) => {
   try {
-    const result = wallsCalc.calcFromRequest(req.body);
-    res.json(result);
+    const body = req.body || {};
+    const height = parseFloat(body.height) || 2.7;
+    const perimeter = parseFloat(body.perimeter) || (Array.isArray(body.walls) ? body.walls.reduce((sum, w) => sum + (parseFloat(w.width) || 0), 0) : 0);
+    const wallArea = parseFloat(body.wallArea) || (Array.isArray(body.walls) ? body.walls.reduce((sum, w) => sum + ((parseFloat(w.width) || 0) * height), 0) : 0);
+    const wallCount = Math.max(1, Math.round(perimeter / 3) || 1);
+    const soundproof = body.soundproof === true || body.soundproof === 'true';
+
+    const iksResult = iks.quickEstimate({
+      wallCount,
+      totalLength: perimeter,
+      height,
+      rollWidth: parseFloat(body.rollWidth) || 3.2,
+      insulationType: soundproof ? 'tonlosAcoustic' : 'none',
+      sockets: body.sockets || [],
+      woodenInserts: parseInt(body.woodenInserts) || 0,
+      includeGlue: body.includeGlue !== false,
+      includeSpray: body.includeSpray || false,
+    });
+
+    const scale = iksResult.totalAreaSqm > 0 && wallArea > 0 ? wallArea / iksResult.totalAreaSqm : 1;
+    const totalClient = Math.round(iksResult.grandTotalRub * scale);
+    const materials = iksResult.materials.map((m) => ({
+      name: m.name,
+      unit: m.unit,
+      quantity: Math.round(m.quantity * scale * 100) / 100,
+      unitPrice: m.unitPrice,
+      total: Math.round(m.total * scale),
+    }));
+
+    res.json({
+      wallArea: Math.round(wallArea * 100) / 100,
+      perimeter: Math.round(perimeter * 100) / 100,
+      height: Math.round(height * 100) / 100,
+      totalClient,
+      materials,
+      summary: {
+        totalAreaSqm: Math.round(iksResult.totalAreaSqm * 100) / 100,
+        wallCount,
+        rollCount: iksResult.packed.length,
+      },
+    });
   } catch (err) {
     console.error('Walls calc error:', err);
     res.status(500).json({ error: 'Ошибка расчёта натяжных стен' });

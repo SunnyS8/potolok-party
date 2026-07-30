@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Калькулятор — Флюкс | СИС</title>
+  <title>Калькулятор — Флюкс</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -76,7 +76,7 @@
 <body>
   <header>
     <div class="container header-inner">
-      <div class="logo">Флюкс <span>| СИС</span></div>
+      <div class="logo">Флюкс</div>
       <nav>
         <a href="/">Главная</a>
         <a href="/calculator.html">Калькулятор</a>
@@ -88,7 +88,7 @@
 
   <main class="calc-page">
     <h1>Калькулятор стоимости</h1>
-    <p class="subtitle">Рассчитайте стоимость натяжных потолков, Системы Идеальных Стен или полного комплекса.</p>
+    <p class="subtitle">Рассчитайте стоимость натяжных потолков, стен или комплексного решения.</p>
 
     <button class="plan-upload-btn" id="planUploadBtn">Загрузить план комнаты — рассчитать по чертежу</button>
 
@@ -136,8 +136,8 @@
     <div class="calc-card">
       <div class="tabs" id="tabs">
         <div class="tab" data-tab="ceiling">Потолки</div>
-        <div class="tab" data-tab="walls">Стены (СИС)</div>
-        <div class="tab" data-tab="combined">Потолки + Стены <span class="badge badge-warm" style="margin-left:4px;font-size:0.65rem">-12%</span></div>
+        <div class="tab" data-tab="walls">Стены</div>
+        <div class="tab" data-tab="combined">Комплекс</div>
       </div>
 
       <!-- TAB: Потолки -->
@@ -196,7 +196,7 @@
         </div>
       </div>
 
-      <!-- TAB: Стены (СИС) -->
+      <!-- TAB: Стены -->
       <div class="tab-content" id="tab-walls">
         <div class="form-group">
           <label>Площадь стен, м²</label>
@@ -245,10 +245,10 @@
         </div>
       </div>
 
-      <!-- TAB: Комплекс Потолки + Стены -->
+      <!-- TAB: Комплекс -->
       <div class="tab-content" id="tab-combined">
         <div class="combined-banner">
-          <strong>Комплекс потолки + стены — скидка 12%</strong>
+          <strong>Комплекс — скидка 12%</strong>
           <p>Полностью готовое помещение: один подрядчик, одна смета, один монтаж</p>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
@@ -290,7 +290,7 @@
             </div>
           </div>
           <div class="combined-col">
-            <h3>Стены (СИС)</h3>
+            <h3>Стены</h3>
             <div class="form-group">
               <label>Площадь стен</label>
               <input type="range" id="combinedWallSlider" min="5" max="100" value="30">
@@ -360,7 +360,7 @@
     </div>
   </main>
 
-  <footer>Флюкс — платформа для СИС и натяжных потолков</footer>
+  <footer>Флюкс — платформа для натяжных потолков, стен и комплексных решений</footer>
   <script src="/js/ux.js"></script>
   <script src="/js/calculator.js"></script>
 </body>
