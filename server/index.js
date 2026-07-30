@@ -46,6 +46,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+// Расширенный калькулятор (React SPA)
+app.use('/drawing', express.static(path.join(__dirname, '..', 'public', 'drawing')));
+
 // Защита панели менеджера
 if (AUTH_TOKEN) {
   app.use('/manager.html', (req, res, next) => {
