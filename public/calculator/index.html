@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Калькулятор смет — Флюкс</title>
+    <script type="module" crossorigin src="/calculator/assets/index-DbXI2lGg.js"></script>
+    <link rel="stylesheet" crossorigin href="/calculator/assets/index-JbieUnke.css">
+  </head>
+  <body>
+    <div id="root">
+      <div style="padding: 2rem; font-family: system-ui, sans-serif; color: #0f172a; background: #f8fafc; min-height: 100vh">
+        <h1 style="font-size: 1.5rem; margin-bottom: 0.5rem">Калькулятор смет — Флюкс</h1>
+        <p id="boot-status">Загрузка приложения…</p>
+      </div>
+    </div>
+    <noscript>
+      <p style="padding: 2rem">Для работы калькулятора нужен JavaScript.</p>
+    </noscript>
+    <script>
+      (function () {
+        var mod = document.querySelector('script[type="module"]');
+        var src = (mod && mod.getAttribute('src')) || '';
+        if (src.indexOf('/src/main') !== -1) {
+          document.getElementById('root').innerHTML =
+            '<div style="padding:2rem;font-family:system-ui,sans-serif;max-width:32rem">' +
+            '<h1 style="font-size:1.25rem">Сайт не собран</h1>' +
+            '<p>На GitHub опубликованы исходники без сборки. Нужен успешный запуск workflow Deploy to GitHub Pages.</p>' +
+            '<p style="margin-top:1rem;font-size:0.875rem;color:#64748b">Репозиторий, вкладка Actions, Run workflow</p>' +
+            '</div>';
+          return;
+        }
+        setTimeout(function () {
+          var status = document.getElementById('boot-status');
+          if (!status) return;
+          status.textContent =
+            'Скрипт не загрузился. F12, Console. На GitHub: Actions, Deploy to GitHub Pages, зелёная галочка, затем Ctrl+F5.';
+          status.style.color = '#b91c1c';
+        }, 5000);
+      })();
+    </script>
+  </body>
+</html>

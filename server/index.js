@@ -49,6 +49,8 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 // Расширенный калькулятор (React SPA)
 app.use('/drawing', express.static(path.join(__dirname, '..', 'public', 'drawing')));
 
+app.use('/calculator', express.static(path.join(__dirname, '..', 'public', 'calculator')));
+
 // Защита панели менеджера
 if (AUTH_TOKEN) {
   app.use('/manager.html', (req, res, next) => {
@@ -128,12 +130,51 @@ app.post('/api/lead', async (req, res) => {
 app.post('/api/calculator', async (req, res) => {
   try {
     const { ceilingType, area, options, clientName, clientPhone, skipAI, source } = req.body;
+    const parsedArea = parseFloat(area) || 0;
+    const estimate = calc.calcLocalEstimate({
+      ceilingType,
+      area: parsedArea,
+      width: parseFloat(req.body.width) || Math.sqrt(parsedArea || 16),
+      length: parseFloat(req.body.length) || Math.sqrt(parsedArea || 16),
+      spots: parseInt(req.body.spots) || 0,
+      chandelier: req.body.chandelier || false,
+      ledStrip: parseFloat(req.body.ledStrip) || 0,
+      pipeBypass: parseInt(req.body.pipeBypass) || 0,
+      cornice: parseFloat(req.body.cornice) || 0,
+      hatch: parseInt(req.body.hatch) || 0,
+      vent: parseInt(req.body.vent) || 0,
+      niche: parseFloat(req.body.niche) || 0,
+    });
+
     let explanation = '';
     if (!skipAI) {
-      try { explanation = await ai.calculatePrice(ceilingType, parseFloat(area), options || []); } catch (e) { explanation = 'Расчёт выполнен локально'; }
+      try {
+        explanation = await ai.calculatePrice(ceilingType, parsedArea, options || []);
+      } catch (e) {
+        explanation = 'Расчёт выполнен локально';
+      }
     }
-    const saved = db.saveCalcRequest({ ceilingType, area: parseFloat(area), options: JSON.stringify(options || []), estimatedPrice: 0, clientName: clientName || '', clientPhone: clientPhone || '', source: source || '' });
-    res.json({ explanation, calcId: saved.id });
+
+    const saved = db.saveCalcRequest({
+      ceilingType,
+      area: parsedArea,
+      options: JSON.stringify(options || []),
+      estimatedPrice: estimate.total,
+      clientName: clientName || '',
+      clientPhone: clientPhone || '',
+      source: source || '',
+    });
+
+    res.json({
+      explanation,
+      calcId: saved.id,
+      estimate,
+      total: estimate.total,
+      canvasPrice: estimate.canvasPrice,
+      extraTotal: estimate.extraTotal,
+      extras: estimate.extras,
+      perimeter: estimate.perimeter,
+    });
   } catch (err) {
     console.error('Calculator error:', err);
     res.status(500).json({ error: 'Ошибка расчёта' });

@@ -127,6 +127,13 @@ function getActiveOptions(prefix) {
 function fmt(n) { return (n || 0).toLocaleString('ru-RU'); }
 function roundTo(n, d) { const f = Math.pow(10, d); return Math.round(n * f) / f; }
 
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 async function calcCeiling() {
   const ceilingType = document.getElementById('ceilingType').value;
   const area = parseFloat(document.getElementById('areaSlider').value);
@@ -139,11 +146,37 @@ async function calcCeiling() {
   });
   const data = await res.json();
   if (data.calcId) lastCalcId = data.calcId;
-  document.getElementById('result').innerHTML = '<div style="font-size:14px;line-height:1.6">' + data.explanation.replace(/\n/g, '<br>') + '</div>';
-  document.getElementById('result').classList.add('show');
-  const cp = { 'Матовый ПВХ':450, 'Глянцевый ПВХ':500, 'Сатиновый ПВХ':550, 'Тканевый':750, 'Двухуровневый':950 }[ceilingType] || 500;
-  const ot = options.reduce((s, o) => s + (parseInt(o.value)||1) * ({lights:500,chandelier:1500,pipes:350,cornice:400}[o.id]||0), 0);
-  showUpgrades(cp * area + ot + 250 * Math.sqrt(area) * 4);
+
+  const resultNode = document.getElementById('result');
+  const html = [];
+  if (data.total !== undefined) {
+    html.push('<div style="margin-bottom:18px;padding:18px;background:#F8FAFC;border-radius:16px;border:1px solid #E2E8F0;">');
+    html.push('<div style="font-size:14px;color:#475569;margin-bottom:10px;">Ориентировочная смета</div>');
+    html.push('<div style="display:grid;grid-template-columns:1fr auto;gap:10px;font-size:14px;color:#334155;line-height:1.75;">');
+    html.push('<div>Полотно:</div><div>' + (data.canvasPrice || 0).toLocaleString('ru-RU') + ' ₽</div>');
+    html.push('<div>Дополнительные работы:</div><div>' + (data.extraTotal || 0).toLocaleString('ru-RU') + ' ₽</div>');
+    if (Array.isArray(data.extras) && data.extras.length) {
+      html.push('<div style="grid-column:1 / -1;padding-top:10px;color:#475569;">Дополнительно:</div>');
+      html.push('<div style="grid-column:1 / -1;font-size:13px;color:#475569;">' + escapeHtml(data.extras.join(', ')) + '</div>');
+    }
+    html.push('<div style="grid-column:1 / -1;margin-top:16px;padding-top:16px;border-top:1px solid #E2E8F0;font-size:18px;font-weight:700;color:#0F172A;">Итого: ' + (data.total || 0).toLocaleString('ru-RU') + ' ₽</div>');
+    html.push('</div></div>');
+  }
+
+  if (data.explanation) {
+    html.push('<div style="font-size:14px;line-height:1.8;color:#334155;padding:0 2px;">' + escapeHtml(data.explanation).replace(/\n/g, '<br>') + '</div>');
+  }
+
+  resultNode.innerHTML = html.join('');
+  resultNode.classList.add('show');
+
+  if (data.total !== undefined) {
+    showUpgrades(data.total);
+  } else {
+    const cp = { 'Матовый ПВХ':450, 'Глянцевый ПВХ':500, 'Сатиновый ПВХ':550, 'Тканевый':750, 'Двухуровневый':950 }[ceilingType] || 500;
+    const ot = options.reduce((s, o) => s + (parseInt(o.value)||1) * ({lights:500,chandelier:1500,pipes:350,cornice:400}[o.id]||0), 0);
+    showUpgrades(cp * area + ot + 250 * Math.sqrt(area) * 4);
+  }
 }
 
 async function calcWalls() {
