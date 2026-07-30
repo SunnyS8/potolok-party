@@ -4,6 +4,12 @@
     { "src": "server/index.js", "use": "@vercel/node" },
     { "src": "public/**/*", "use": "@vercel/static" }
   ],
+  "redirects": [
+    { "source": "/drawing", "destination": "/calculator.html", "permanent": true },
+    { "source": "/drawing/(.*)", "destination": "/calculator.html", "permanent": true },
+    { "source": "/calculator", "destination": "/calculator.html", "permanent": true },
+    { "source": "/calculator/(.*)", "destination": "/calculator.html", "permanent": true }
+  ],
   "routes": [
     { "src": "^/api/(.*)$", "dest": "/server/index.js" },
     { "src": "^/$", "dest": "/public/index.html" },
