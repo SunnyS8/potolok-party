@@ -344,6 +344,18 @@
         </tr>
       `).join('');
 
+      const upgradesBody = document.getElementById('pricesUpgradesBody');
+      if (data.upgrades) {
+        upgradesBody.innerHTML = data.upgrades.map(u => {
+          const display = u.type === 'percent' ? '%' : '₽';
+          return `<tr>
+            <td>${u.label}<br><span style="font-size:11px;color:#6B7280">${u.desc}</span></td>
+            <td><span class="price-edit" data-type="upgrade" data-id="${u.id}" contenteditable>${u.price}</span> ${display}</td>
+            <td></td>
+          </tr>`;
+        }).join('');
+      }
+
       // ─── Add-row forms ─────────────────────────────────────
       const makeAddBtn = (label, placeholder, fields, endpoint) => {
         const btn = document.createElement('button');
@@ -400,6 +412,7 @@
           const wkey = this.dataset.wkey;
           if (wtype === 'material') url = `/api/prices/walls/material/${wkey}`;
           if (wtype === 'install') url = `/api/prices/walls/installation/${wkey}`;
+          if (type === 'upgrade') url = `/api/prices/upgrades/${id}`;
           try {
             await apiFetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
           } catch (e) { console.error('Save price error:', e); this.textContent = this.dataset.orig; }

@@ -5,3 +5,5 @@ data/
 .agents/
 skills-lock.json
 iks-wallpaper-calculator/
+
+.vercel

@@ -111,6 +111,7 @@ app.post('/api/lead', async (req, res) => {
       wallSystem: data.wallSystem || '',
       hasLights: data.hasLights ? 1 : 0,
       notes: data.notes || '',
+      upgrades: data.upgrades || '',
     });
     notify.notifyAll(lead);
     const clientData = data.phone ? clientCabinet.loginByPhone(data.phone) : null;
@@ -380,6 +381,17 @@ app.put('/api/prices/sis', (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Ошибка' }); }
 });
 
+app.put('/api/prices/upgrades/:id', (req, res) => {
+  try {
+    const data = prices.getAll();
+    const idx = data.upgrades.findIndex(u => u.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: 'Не найдено' });
+    data.upgrades[idx] = { ...data.upgrades[idx], price: req.body.price };
+    prices.save(data);
+    res.json({ ok: true, item: data.upgrades[idx] });
+  } catch (err) { res.status(500).json({ error: 'Ошибка' }); }
+});
+
 // ─── Add/delete price items ────────────────────────────────────
 const genId = (label) => label.toLowerCase().replace(/[^a-zа-яё0-9]+/g, '_').replace(/[^a-zа-яё0-9_]/g, '').slice(0, 30);
 
@@ -583,9 +595,13 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  const provider = ai.getProviderName() || 'не настроен (работает без ИИ)';
-  console.log(`🚀 Потолок Пати AI запущен: http://localhost:${PORT}`);
-  console.log(`   Провайдер: ${provider}, модель: ${ai.getModel()}`);
-  console.log(`   Пакет: Growth/Automation — CRM, сметы, ассистент, аналитика`);
-});
+if (require.main === module) {
+  app.listen(PORT, '0.0.0.0', () => {
+    const provider = ai.getProviderName() || 'не настроен (работает без ИИ)';
+    console.log(`🚀 Потолок Пати AI запущен: http://localhost:${PORT}`);
+    console.log(`   Провайдер: ${provider}, модель: ${ai.getModel()}`);
+    console.log(`   Пакет: Growth/Automation — CRM, сметы, ассистент, аналитика`);
+  });
+}
+
+module.exports = app;

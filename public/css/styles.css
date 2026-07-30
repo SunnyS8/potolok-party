@@ -95,6 +95,23 @@ nav a::after {
 }
 nav a:hover::after { transform: scaleX(1); }
 
+.promo-banner {
+  background: var(--accent-primary);
+  color: #fff;
+  text-align: center;
+  padding: 0.65rem 0;
+}
+.promo-banner p {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.promo-banner__link {
+  color: #fff;
+  text-decoration: underline;
+  margin-left: 0.75rem;
+}
+.promo-banner__link:hover { opacity: 0.88; }
+
 .hero {
   padding: 6rem 0 5rem;
   background: linear-gradient(160deg, #F5F3EF 0%, #F8F7F4 40%, #EEECE6 100%);
@@ -143,6 +160,13 @@ nav a:hover::after { transform: scaleX(1); }
 }
 .hero-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
 
+.hero-badge { margin-bottom: 1rem; }
+
+.btn-sm {
+  font-size: 0.85rem;
+  padding: 0.7rem 1.25rem;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -184,6 +208,228 @@ nav a:hover::after { transform: scaleX(1); }
 }
 .btn-ghost:hover { color: var(--accent-primary); background: var(--accent-primary-light); }
 .btn-lg { padding: 0.8rem 2rem; font-size: 1rem; border-radius: var(--radius-lg); }
+
+.btn-card {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.85rem 1.4rem;
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid var(--border-light);
+  background: var(--surface-soft);
+  color: var(--text-primary);
+  transition: all var(--transition-base);
+}
+.btn-card:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  box-shadow: var(--shadow-card);
+}
+.product-card.featured .btn-card {
+  border-color: transparent;
+  background: var(--accent-primary);
+  color: #fff;
+}
+.product-card.featured .btn-card:hover {
+  background: var(--accent-primary-hover);
+  box-shadow: 0 4px 12px rgba(91,138,140,0.25);
+}
+
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: 1.5rem;
+}
+.product-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  padding: 2rem 1.75rem;
+  text-align: center;
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-card);
+  position: relative;
+}
+.product-card:hover {
+  box-shadow: var(--shadow-elevated);
+  transform: translateY(-3px);
+}
+.product-card.featured {
+  border-color: var(--accent-primary);
+  background: linear-gradient(180deg, var(--surface-card) 0%, var(--accent-primary-light) 100%);
+}
+.product-card.featured .card-badge {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.product-card .icon {
+  font-size: 2rem;
+  margin-bottom: 12px;
+  color: var(--accent-primary);
+  opacity: 0.7;
+}
+.product-card h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+.product-card .price-from {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+.product-card .price-from strong {
+  color: var(--accent-primary);
+  font-size: 1.1rem;
+}
+.product-card ul.features {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 20px;
+  text-align: left;
+}
+.product-card ul.features li {
+  padding: 5px 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  line-height: 1.55;
+}
+.product-card ul.features li::before {
+  content: "✓";
+  color: var(--accent-success);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.savings-block {
+  background: var(--accent-success-light);
+  border: 1px solid rgba(125,171,125,0.2);
+  border-radius: var(--radius-xl);
+  padding: 2.5rem 2rem;
+  margin-top: 3rem;
+  text-align: center;
+}
+.savings-block h3 {
+  font-size: 1.3rem;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.01em;
+}
+.savings-block .amount {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--accent-success);
+  margin: 0.75rem 0 1rem;
+}
+.savings-block p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.text-highlight {
+  color: var(--accent-primary);
+}
+
+.section-surface {
+  background: var(--surface-card);
+}
+
+.advantages-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 1.5rem;
+}
+.advantage-card {
+  text-align: center;
+  padding: 2rem 1.5rem;
+  background: var(--surface-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-card);
+}
+.advantage-card:hover {
+  box-shadow: var(--shadow-elevated);
+  transform: translateY(-2px);
+}
+.advantage-card .num {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--accent-primary);
+  margin-bottom: 0.75rem;
+  line-height: 1.1;
+}
+.advantage-card h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+.advantage-card p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.process-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 1.25rem;
+}
+.process-step {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  background: var(--surface-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+}
+.step-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--accent-primary-light);
+  color: var(--accent-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  margin: 0 auto 1rem;
+}
+.process-step h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+.process-step p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.small-note {
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+.small-note__link {
+  color: var(--text-secondary);
+  text-decoration: underline;
+}
+.small-note__link:hover { color: var(--accent-primary); }
+
+.footer-link {
+  color: var(--text-muted);
+}
+.footer-link:hover { color: var(--accent-primary); }
 
 section { padding: 5rem 0; }
 

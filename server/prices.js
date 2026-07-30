@@ -33,6 +33,11 @@ const defaults = {
     paintableLabel: 'Полотно под покраску',
     colors: ['Белый мат', 'Чёрный мат', 'Белый муар', 'Чёрный муар'],
   },
+  upgrades: [
+    { id: 'visualization', label: '3D-визуализация', type: 'fixed', price: 2900, unit: 'шт', desc: 'Фотореалистичный рендер комнаты до монтажа' },
+    { id: 'expressSurvey', label: 'Срочный замер', type: 'fixed', price: 1500, unit: 'шт', desc: 'Выезд на следующий день' },
+    { id: 'extendedWarranty', label: 'Расширенная гарантия', type: 'percent', price: 5, unit: '%', desc: 'Гарантия 20 лет на полотно' },
+  ],
   walls: {
     materials: {
       fabric: { label: 'Полотно натяжное (Tönlos Heavy Felt)', unit: 'м²', companyPrice: 480, clientPrice: 950, wastePercent: 10 },
@@ -99,6 +104,7 @@ function getAll() {
     delete data.sis.baseUnit;
   }
   if (!data.sis.components) data.sis.components = defaults.sis.components;
+  if (!data.upgrades) data.upgrades = defaults.upgrades;
   return data;
 }
 
@@ -138,6 +144,10 @@ function getSisPrices() {
   return getAll().sis || defaults.sis;
 }
 
+function getUpgrades() {
+  return getAll().upgrades || defaults.upgrades;
+}
+
 function formatPriceList() {
   const data = getAll();
   const lines = data.ceilingTypes.map(c => `- ${c.label} — от ${c.pricePerM2} ₽/м²`);
@@ -158,7 +168,8 @@ function getAiPriceContext() {
       components: data.sis.components,
       soundproofPrice: data.sis.soundproofPrice,
     },
+    upgrades: data.upgrades,
   };
 }
 
-module.exports = { getAll, save, getCeilingPrice, getOptionPrice, getProfilePrice, getWallPrices, saveWallPrices, getSisPrices, formatPriceList, getAiPriceContext, defaults };
+module.exports = { getAll, save, getCeilingPrice, getOptionPrice, getProfilePrice, getWallPrices, saveWallPrices, getSisPrices, getUpgrades, formatPriceList, getAiPriceContext, defaults };

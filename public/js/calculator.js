@@ -1,10 +1,13 @@
 let activeTab = 'ceiling';
 let lastCalcId = null;
 let wallPrices = null;
+let upgradesData = [];
+let baseTotal = 0;
 
 // Load prices from server
 fetch('/api/prices').then(r => r.json()).then(d => {
   wallPrices = d.walls || null;
+  if (d.upgrades) upgradesData = d.upgrades;
 }).catch(() => {});
 
 function isCombined() { return activeTab === 'combined'; }
@@ -138,6 +141,9 @@ async function calcCeiling() {
   if (data.calcId) lastCalcId = data.calcId;
   document.getElementById('result').innerHTML = '<div style="font-size:14px;line-height:1.6">' + data.explanation.replace(/\n/g, '<br>') + '</div>';
   document.getElementById('result').classList.add('show');
+  const cp = { 'Матовый ПВХ':450, 'Глянцевый ПВХ':500, 'Сатиновый ПВХ':550, 'Тканевый':750, 'Двухуровневый':950 }[ceilingType] || 500;
+  const ot = options.reduce((s, o) => s + (parseInt(o.value)||1) * ({lights:500,chandelier:1500,pipes:350,cornice:400}[o.id]||0), 0);
+  showUpgrades(cp * area + ot + 250 * Math.sqrt(area) * 4);
 }
 
 async function calcWalls() {
@@ -197,6 +203,7 @@ async function calcWalls() {
   html += '</div>';
   document.getElementById('result').innerHTML = html;
   document.getElementById('result').classList.add('show');
+  showUpgrades(p.totalClient);
 }
 
 async function calcCombined() {
@@ -258,6 +265,55 @@ async function calcCombined() {
 
   document.getElementById('result').innerHTML = html;
   document.getElementById('result').classList.add('show');
+  showUpgrades(data.combined.finalTotal);
+}
+// ─── Upgrades (доп. услуги) ────────────────────────────────────
+function showUpgrades(baseAmount) {
+  baseTotal = baseAmount;
+  const section = document.getElementById('upgradesSection');
+  const list = document.getElementById('upgradesList');
+  if (!section || !list) return;
+  section.style.display = 'block';
+  list.innerHTML = upgradesData.map(u => {
+    const displayPrice = u.type === 'percent' ? '+' + u.price + '%' : u.price.toLocaleString('ru-RU') + ' ₽';
+    return '<label class="upgrade-item" data-id="' + u.id + '">' +
+      '<input type="checkbox" class="upgrade-check" data-id="' + u.id + '">' +
+      '<div class="upgrade-content" style="flex:1">' +
+      '<div class="upgrade-label" style="font-weight:600;font-size:14px">' + u.label + '</div>' +
+      '<div style="font-size:12px;color:#6B7280">' + u.desc + '</div></div>' +
+      '<div style="font-weight:700;font-size:14px;color:#2563EB">' + displayPrice + '</div>' +
+      '</label>';
+  }).join('');
+  document.getElementById('upgradesTotal').style.display = 'none';
+  document.querySelectorAll('.upgrade-check').forEach(cb => {
+    cb.addEventListener('change', recalcUpgradesTotal);
+  });
+}
+
+function recalcUpgradesTotal() {
+  let extra = 0;
+  document.querySelectorAll('.upgrade-check:checked').forEach(cb => {
+    const u = upgradesData.find(x => x.id === cb.dataset.id);
+    if (!u) return;
+    if (u.type === 'fixed') extra += u.price;
+    if (u.type === 'percent') extra += baseTotal * u.price / 100;
+  });
+  const el = document.getElementById('upgradesTotal');
+  if (extra > 0) {
+    el.style.display = 'block';
+    document.getElementById('upgradesTotalValue').textContent = (baseTotal + extra).toLocaleString('ru-RU') + ' ₽';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+function getSelectedUpgrades() {
+  const selected = [];
+  document.querySelectorAll('.upgrade-check:checked').forEach(cb => {
+    const u = upgradesData.find(x => x.id === cb.dataset.id);
+    if (u) selected.push({ id: u.id, label: u.label, price: u.type === 'fixed' ? u.price : Math.round(baseTotal * u.price / 100) });
+  });
+  return selected;
 }
 
 // Lead form
@@ -288,12 +344,14 @@ document.getElementById('leadBtn').addEventListener('click', async () => {
     hasWalls = 1;
   }
 
+  const selUpgrades = getSelectedUpgrades();
   const res = await fetch('/api/lead', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       name, phone, source: productType === 'combined' ? 'combined_calc' : 'calculator',
       productType, ceilingType, area, hasWalls, wallArea,
+      upgrades: selUpgrades.length ? JSON.stringify(selUpgrades) : '',
     })
   });
   const data = await res.json();
