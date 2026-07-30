@@ -625,6 +625,8 @@ footer {
   font-family: var(--font-sans);
 }
 
+.price-total-anim { display: inline-block; animation: pricePulse 0.5s cubic-bezier(0.16,1,0.3,1); }
+
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
@@ -659,10 +661,10 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
   line-height: 1.6;
   font-size: 0.9375rem;
 }
-.result-box.show { display: block; }
+.result-box.show { display: block; animation: fadeUpIn 0.4s cubic-bezier(0.16,1,0.3,1); }
 
 .loading { text-align: center; padding: 1.5rem; display: none; }
-.loading.show { display: block; }
+.loading.show { display: block; animation: fadeUpIn 0.3s ease; }
 
 .skeleton {
   width: 100%;
@@ -678,9 +680,58 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
+@keyframes fadeUpIn {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes pricePulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+@keyframes checkPop {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.6s cubic-bezier(0.16,1,0.3,1), transform 0.6s cubic-bezier(0.16,1,0.3,1); }
+.reveal.visible { opacity: 1; transform: translateY(0); }
+.reveal-delay-1 { transition-delay: 0.1s; }
+.reveal-delay-2 { transition-delay: 0.2s; }
+.reveal-delay-3 { transition-delay: 0.3s; }
+.reveal-delay-4 { transition-delay: 0.4s; }
 
 #leadForm { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--border-light); }
 #leadForm h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--text-primary); }
+
+.form-success {
+  text-align: center;
+  padding: 2rem 1rem;
+  animation: scaleIn 0.4s cubic-bezier(0.16,1,0.3,1);
+}
+.form-success .checkmark {
+  width: 56px;
+  height: 56px;
+  background: var(--accent-success);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+  animation: checkPop 0.4s cubic-bezier(0.16,1,0.3,1);
+}
+.form-success .checkmark svg { width: 28px; height: 28px; stroke: #fff; }
+.form-success h4 { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.3rem; }
+.form-success p { font-size: 0.9rem; color: var(--text-secondary); }
 
 .badge {
   display: inline-block;

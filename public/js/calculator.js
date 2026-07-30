@@ -203,6 +203,8 @@ async function calcWalls() {
   html += '</div>';
   document.getElementById('result').innerHTML = html;
   document.getElementById('result').classList.add('show');
+  const sp = document.querySelector('.sis-price');
+  if (sp) setTimeout(() => sp.classList.add('price-total-anim'), 100);
   showUpgrades(p.totalClient);
 }
 
@@ -265,6 +267,8 @@ async function calcCombined() {
 
   document.getElementById('result').innerHTML = html;
   document.getElementById('result').classList.add('show');
+  const ft = document.querySelector('#result div[style*="36px"]');
+  if (ft) ft.classList.add('price-total-anim');
   showUpgrades(data.combined.finalTotal);
 }
 // ─── Upgrades (доп. услуги) ────────────────────────────────────
@@ -366,8 +370,8 @@ document.getElementById('leadBtn').addEventListener('click', async () => {
     if (data.client && data.client.token) {
       localStorage.setItem('client_token', data.client.token);
     }
-    document.getElementById('leadForm').style.display = 'none';
-    document.getElementById('result').insertAdjacentHTML('afterend',
+    showFormSuccess(document.getElementById('leadForm'));
+    document.getElementById('leadForm').insertAdjacentHTML('afterend',
       '<div class="cabinet-link" style="margin-top:16px;padding:16px;background:#EFF6FF;border-radius:12px;text-align:center">' +
       '<p style="margin-bottom:8px;font-weight:600">Заявка отправлена!</p>' +
       '<a href="/client.html" class="btn btn-primary" style="display:inline-block">Перейти в личный кабинет</a>' +
