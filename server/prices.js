@@ -37,6 +37,24 @@ const defaults = {
     { id: 'visualization', label: '3D-визуализация', type: 'fixed', price: 2900, unit: 'шт', desc: 'Фотореалистичный рендер комнаты до монтажа' },
     { id: 'expressSurvey', label: 'Срочный замер', type: 'fixed', price: 1500, unit: 'шт', desc: 'Выезд на следующий день' },
   ],
+  iks: {
+    wallpaperPerSqm: 1200,
+    profileBase: 450,
+    profileInnerCorner: 480,
+    profileOuterCorner: 480,
+    profileShadowBaseboard: 520,
+    profileWallCeiling: 490,
+    profileSeparator: 510,
+    tonlosAcousticFelt: 1800,
+    tonlosHeavyFelt: 2400,
+    fintek150: 3500,
+    insertID: 2200,
+    insertType1: 85,
+    insertType2: 120,
+    insertType3: 140,
+    adhesiveLiquidPer5L: 4500,
+    adhesiveSprayPer650ml: 850,
+  },
   walls: {
     materials: {
       fabric: { label: 'Полотно натяжное (Tönlos Heavy Felt)', unit: 'м²', companyPrice: 480, clientPrice: 950, wastePercent: 10 },
@@ -104,6 +122,7 @@ function getAll() {
   }
   if (!data.sis.components) data.sis.components = defaults.sis.components;
   if (!data.upgrades) data.upgrades = defaults.upgrades;
+  if (!data.iks) data.iks = defaults.iks;
   return data;
 }
 
