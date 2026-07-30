@@ -1,4 +1,4 @@
-const nodemailer = require('nodemailer');
+﻿const nodemailer = require('nodemailer');
 
 let transporter = null;
 
@@ -31,7 +31,7 @@ async function sendEmailNotification(data) {
     ? `Стены (СИС): ${data.wallArea ? data.wallArea + ' м²' : 'Да'}\n`
     : '';
   const text = `
-Новая заявка с сайта «ИКС»
+Новая заявка с сайта «Флюкс»
 
 Имя: ${data.name || '—'}
 Телефон: ${data.phone || '—'}
