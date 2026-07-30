@@ -36,7 +36,6 @@ const defaults = {
   upgrades: [
     { id: 'visualization', label: '3D-визуализация', type: 'fixed', price: 2900, unit: 'шт', desc: 'Фотореалистичный рендер комнаты до монтажа' },
     { id: 'expressSurvey', label: 'Срочный замер', type: 'fixed', price: 1500, unit: 'шт', desc: 'Выезд на следующий день' },
-    { id: 'extendedWarranty', label: 'Расширенная гарантия', type: 'percent', price: 5, unit: '%', desc: 'Гарантия 20 лет на полотно' },
   ],
   walls: {
     materials: {
