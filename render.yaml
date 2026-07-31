@@ -1,0 +1,25 @@
+# Render Blueprint — деплой через GitHub: New > Blueprint > этот репозиторий
+services:
+  - type: web
+    name: potolok-party
+    runtime: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: node server/index.js
+    healthCheckPath: /api/health
+    autoDeploy: true
+    disk:
+      name: potolok-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 22.18.0
+      - key: DATA_DIR
+        value: /var/data
+      - key: HUBRIS_API_KEY
+        sync: false
+      - key: HUBRIS_BASE_URL
+        value: https://api.hubris.pw/v1
+      - key: HUBRIS_MODEL
+        value: hubris/free

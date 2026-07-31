@@ -1,10 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 
-// На Vercel (serverless) ФС доступна на запись только в /tmp
-const DATA_DIR = process.env.VERCEL === '1'
-  ? path.join('/tmp', 'potolok-data')
-  : path.join(__dirname, '..', 'data');
+// Путь к данным: явный DATA_DIR (Render persistent disk) > /tmp (Vercel serverless) > локальная data/
+const DATA_DIR = process.env.DATA_DIR
+  ? process.env.DATA_DIR
+  : process.env.VERCEL === '1'
+    ? path.join('/tmp', 'potolok-data')
+    : path.join(__dirname, '..', 'data');
 const DB_FILE = path.join(DATA_DIR, 'app.db');
 const LEADS_FILE = path.join(DATA_DIR, 'leads.json');
 const CALC_FILE = path.join(DATA_DIR, 'calculator_requests.json');
