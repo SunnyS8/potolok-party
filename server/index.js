@@ -59,6 +59,7 @@ function requireWrite(req, res, next) {
 }
 
 const app = express();
+app.set('trust proxy', 1);
 
 app.get(['/drawing', '/drawing/'], (req, res) => res.redirect(301, '/calculator/'));
 app.get('/drawing/*', (req, res) => res.redirect(301, '/calculator/'));
