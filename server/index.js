@@ -12,7 +12,6 @@ const calc = require('./calculator');
 const assistant = require('./assistant');
 const analytics = require('./analytics');
 const prices = require('./prices');
-const wallsCalc = require('./walls');
 const iks = require('./iks-calculator');
 const combinedCalc = require('./combined');
 const exp = require('./export');
@@ -243,6 +242,14 @@ app.post('/api/calculator/quote', async (req, res) => {
 app.post('/api/walls/calculate', (req, res) => {
   try {
     const body = req.body || {};
+
+    // Детальный режим (installer): стены с шириной и объектами
+    if (Array.isArray(body.walls) && body.walls.length > 0 && body.walls[0].width !== undefined) {
+      const detailed = iks.calcDetailed(body);
+      return res.json(detailed);
+    }
+
+    // Быстрый режим (клиентский калькулятор): периметр/площадь
     const height = parseFloat(body.height) || 2.7;
     const perimeter = parseFloat(body.perimeter) || (Array.isArray(body.walls) ? body.walls.reduce((sum, w) => sum + (parseFloat(w.width) || 0), 0) : 0);
     const wallArea = parseFloat(body.wallArea) || (Array.isArray(body.walls) ? body.walls.reduce((sum, w) => sum + ((parseFloat(w.width) || 0) * height), 0) : 0);
@@ -468,30 +475,31 @@ app.put('/api/prices/profile', (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Ошибка' }); }
 });
 
-app.put('/api/prices/walls', (req, res) => {
-  try {
-    prices.saveWallPrices(req.body);
-    res.json({ ok: true });
-  } catch (err) { res.status(500).json({ error: 'Ошибка сохранения цен стен' }); }
-});
-
-app.put('/api/prices/walls/material/:id', (req, res) => {
+app.put('/api/prices/iks-company', (req, res) => {
   try {
     const data = prices.getAll();
-    if (!data.walls || !data.walls.materials[req.params.id]) return res.status(404).json({ error: 'Не найдено' });
-    data.walls.materials[req.params.id] = { ...data.walls.materials[req.params.id], ...req.body };
+    if (!data.iksCompany) data.iksCompany = {};
+    data.iksCompany = { ...data.iksCompany, ...req.body };
     prices.save(data);
-    res.json({ ok: true, item: data.walls.materials[req.params.id] });
-  } catch (err) { res.status(500).json({ error: 'Ошибка' }); }
+    res.json({ ok: true, item: data.iksCompany });
+  } catch (err) { res.status(500).json({ error: 'Ошибка сохранения себестоимости IKS' }); }
 });
 
-app.put('/api/prices/walls/installation/:id', (req, res) => {
+app.put('/api/prices/iks-install/:key', (req, res) => {
   try {
     const data = prices.getAll();
-    if (!data.walls || !data.walls.installation[req.params.id]) return res.status(404).json({ error: 'Не найдено' });
-    data.walls.installation[req.params.id] = { ...data.walls.installation[req.params.id], ...req.body };
+    if (!data.iksInstall || !data.iksInstall[req.params.key]) return res.status(404).json({ error: 'Не найдено' });
+    const item = data.iksInstall[req.params.key];
+    if (typeof item === 'object') {
+      if (req.body.companyRate !== undefined) item.companyRate = Number(req.body.companyRate) || 0;
+      if (req.body.clientRate !== undefined) item.clientRate = Number(req.body.clientRate) || 0;
+      if (req.body.label !== undefined) item.label = req.body.label;
+      if (req.body.unit !== undefined) item.unit = req.body.unit;
+    } else if (req.body.value !== undefined) {
+      data.iksInstall[req.params.key] = Number(req.body.value) || 0;
+    }
     prices.save(data);
-    res.json({ ok: true, item: data.walls.installation[req.params.id] });
+    res.json({ ok: true, item: data.iksInstall[req.params.key] });
   } catch (err) { res.status(500).json({ error: 'Ошибка' }); }
 });
 
@@ -570,50 +578,6 @@ app.delete('/api/prices/option/:id', (req, res) => {
     const idx = data.options.findIndex(o => o.id === req.params.id);
     if (idx === -1) return res.status(404).json({ error: 'Не найдено' });
     data.options.splice(idx, 1);
-    prices.save(data);
-    res.json({ ok: true });
-  } catch (err) { res.status(500).json({ error: 'Ошибка' }); }
-});
-
-app.post('/api/prices/walls/material', (req, res) => {
-  try {
-    const data = prices.getAll();
-    const key = req.body.key || genId(req.body.label || 'new') + '_' + Date.now();
-    if (data.walls.materials[key]) return res.status(400).json({ error: 'Ключ уже существует' });
-    data.walls.materials[key] = { label: req.body.label || 'Новый материал', unit: req.body.unit || 'м²', companyPrice: Number(req.body.companyPrice) || 0, clientPrice: Number(req.body.clientPrice) || 0 };
-    if (req.body.wastePercent) data.walls.materials[key].wastePercent = Number(req.body.wastePercent);
-    if (req.body.perMeters) data.walls.materials[key].perMeters = Number(req.body.perMeters);
-    prices.save(data);
-    res.json({ ok: true, item: data.walls.materials[key] });
-  } catch (err) { res.status(500).json({ error: 'Ошибка' }); }
-});
-
-app.delete('/api/prices/walls/material/:key', (req, res) => {
-  try {
-    const data = prices.getAll();
-    if (!data.walls.materials[req.params.key]) return res.status(404).json({ error: 'Не найдено' });
-    delete data.walls.materials[req.params.key];
-    prices.save(data);
-    res.json({ ok: true });
-  } catch (err) { res.status(500).json({ error: 'Ошибка' }); }
-});
-
-app.post('/api/prices/walls/installation', (req, res) => {
-  try {
-    const data = prices.getAll();
-    const key = req.body.key || genId(req.body.label || 'new') + '_' + Date.now();
-    if (data.walls.installation[key]) return res.status(400).json({ error: 'Ключ уже существует' });
-    data.walls.installation[key] = { label: req.body.label || 'Новая работа', unit: req.body.unit || 'м²', companyRate: Number(req.body.companyRate) || 0, clientRate: Number(req.body.clientRate) || 0 };
-    prices.save(data);
-    res.json({ ok: true, item: data.walls.installation[key] });
-  } catch (err) { res.status(500).json({ error: 'Ошибка' }); }
-});
-
-app.delete('/api/prices/walls/installation/:key', (req, res) => {
-  try {
-    const data = prices.getAll();
-    if (!data.walls.installation[req.params.key]) return res.status(404).json({ error: 'Не найдено' });
-    delete data.walls.installation[req.params.key];
     prices.save(data);
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: 'Ошибка' }); }

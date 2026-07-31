@@ -387,6 +387,7 @@
 
       const iksBody = document.getElementById('pricesIksBody');
       if (data.iks) {
+        const iksCompany = data.iksCompany || {};
         const iksLabels = {
           wallpaperPerSqm: 'Полотно MSD / м²', profileBase: 'Профиль ID базовый',
           profileInnerCorner: 'ID внутр. угол', profileOuterCorner: 'ID внешн. угол',
@@ -407,10 +408,26 @@
         iksBody.innerHTML = Object.entries(iksLabels).map(([k, label]) => `
           <tr>
             <td>${label}</td>
+            <td><span class="price-edit" data-type="ikscompany" data-ikskey="${k}" contenteditable>${iksCompany[k] ?? ''}</span></td>
             <td><span class="price-edit" data-type="iks" data-ikskey="${k}" contenteditable>${data.iks[k] ?? ''}</span></td>
             <td>${iksUnits[k] || ''}</td>
           </tr>
         `).join('');
+      }
+
+      const iksInstallBody = document.getElementById('pricesIksInstallBody');
+      if (data.iksInstall && iksInstallBody) {
+        iksInstallBody.innerHTML = Object.entries(data.iksInstall).map(([k, v]) => {
+          if (typeof v !== 'object') {
+            return `<tr><td>Доплата за высоту (&gt;3.5 м)</td><td colspan="2"><span class="price-edit" data-type="iksinstall" data-wkey="${k}" data-wfield="value" contenteditable>${v}</span></td><td>%</td></tr>`;
+          }
+          return `<tr>
+            <td>${v.label}</td>
+            <td><span class="price-edit" data-type="iksinstall" data-wkey="${k}" data-wfield="companyRate" contenteditable>${v.companyRate}</span></td>
+            <td><span class="price-edit" data-type="iksinstall" data-wkey="${k}" data-wfield="clientRate" contenteditable>${v.clientRate}</span></td>
+            <td>₽/${v.unit}</td>
+          </tr>`;
+        }).join('');
       }
 
       const sisBody = document.getElementById('pricesSisBody');
@@ -426,32 +443,6 @@
         `).join('') + `
           <tr><td>${data.sis.soundproofLabel}</td><td><span class="price-edit" data-type="sis" data-field="soundproofPrice" contenteditable>${data.sis.soundproofPrice}</span></td><td>₽/м²</td><td></td></tr>
         `;
-      }
-
-      const wallMatBody = document.getElementById('pricesWallMaterialsBody');
-      const wallInstBody = document.getElementById('pricesWallInstallBody');
-      if (data.walls) {
-        const wm = data.walls.materials;
-        wallMatBody.innerHTML = Object.entries(wm).map(([k, v]) => `
-          <tr>
-            <td>${v.label}</td>
-            <td><span class="price-edit" data-wtype="material" data-wkey="${k}" data-wfield="companyPrice" contenteditable>${v.companyPrice}</span></td>
-            <td><span class="price-edit" data-wtype="material" data-wkey="${k}" data-wfield="clientPrice" contenteditable>${v.clientPrice}</span></td>
-            <td>${v.unit}</td>
-            <td><button class="price-del" data-endpoint="walls/material/${k}" title="Удалить">✕</button></td>
-          </tr>
-        `).join('');
-
-        const wi = data.walls.installation;
-        wallInstBody.innerHTML = Object.entries(wi).map(([k, v]) => `
-          <tr>
-            <td>${v.label}</td>
-            <td><span class="price-edit" data-wtype="install" data-wkey="${k}" data-wfield="companyRate" contenteditable>${v.companyRate}</span></td>
-            <td><span class="price-edit" data-wtype="install" data-wkey="${k}" data-wfield="clientRate" contenteditable>${v.clientRate}</span></td>
-            <td>${v.unit}</td>
-            <td><button class="price-del" data-endpoint="walls/installation/${k}" title="Удалить">✕</button></td>
-          </tr>
-        `).join('');
       }
 
       const optionsBody = document.getElementById('pricesOptionsBody');
@@ -498,12 +489,6 @@
       document.getElementById('pricesOptionsBody').parentElement.parentElement.after(
         makeAddBtn('Добавить опцию', 'Название', [{ key: 'label', label: 'Название' }, { key: 'unit', label: 'Ед.изм', default: 'шт' }, { key: 'price', label: 'Цена', default: '0' }], 'option')
       );
-      document.getElementById('pricesWallMaterialsBody').parentElement.parentElement.after(
-        makeAddBtn('Добавить материал', 'Название', [{ key: 'label', label: 'Название' }, { key: 'unit', label: 'Ед.изм', default: 'м²' }, { key: 'companyPrice', label: 'Себестоимость', default: '0' }, { key: 'clientPrice', label: 'Цена клиенту', default: '0' }], 'walls/material')
-      );
-      document.getElementById('pricesWallInstallBody').parentElement.parentElement.after(
-        makeAddBtn('Добавить работу', 'Название', [{ key: 'label', label: 'Название' }, { key: 'unit', label: 'Ед.изм', default: 'м²' }, { key: 'companyRate', label: 'Себестоимость', default: '0' }, { key: 'clientRate', label: 'Цена клиенту', default: '0' }], 'walls/installation')
-      );
       document.getElementById('pricesSisBody').parentElement.parentElement.after(
         makeAddBtn('Добавить компонент СИС', 'Название', [{ key: 'label', label: 'Название' }, { key: 'unit', label: 'Ед.изм', default: 'м' }, { key: 'price', label: 'Цена', default: '0' }], 'sis/component')
       );
@@ -527,11 +512,15 @@
             if (comp) body = { component: comp, price: newVal };
           }
           const ikskey = this.dataset.ikskey;
-          if (ikskey) { url = `/api/prices/iks`; body = { [ikskey]: newVal }; }
-          const wtype = this.dataset.wtype;
-          const wkey = this.dataset.wkey;
-          if (wtype === 'material') url = `/api/prices/walls/material/${wkey}`;
-          if (wtype === 'install') url = `/api/prices/walls/installation/${wkey}`;
+          if (ikskey && type === 'iks') { url = `/api/prices/iks`; body = { [ikskey]: newVal }; }
+          if (ikskey && type === 'ikscompany') { url = `/api/prices/iks-company`; body = { [ikskey]: newVal }; }
+          if (type === 'iksinstall') {
+            const wkey = this.dataset.wkey;
+            const wfield = this.dataset.wfield;
+            url = `/api/prices/iks-install/${wkey}`;
+            body = { [wfield]: newVal };
+            if (wfield === 'value') body = { value: newVal };
+          }
           if (type === 'upgrade') url = `/api/prices/upgrades/${id}`;
           try {
             await apiFetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });

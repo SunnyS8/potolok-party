@@ -55,47 +55,35 @@ const defaults = {
     adhesiveLiquidPer5L: 4500,
     adhesiveSprayPer650ml: 850,
   },
-  walls: {
-    materials: {
-      fabric: { label: 'Полотно натяжное (Tönlos Heavy Felt)', unit: 'м²', companyPrice: 480, clientPrice: 950, wastePercent: 10 },
-      topProfile: { label: 'Профиль верхний (потолочный)', unit: 'м', companyPrice: 120, clientPrice: 300 },
-      bottomProfile: { label: 'Профиль нижний (теневой)', unit: 'м', companyPrice: 110, clientPrice: 280 },
-      cornerInternal: { label: 'Уголок внутренний', unit: 'шт', companyPrice: 45, clientPrice: 120 },
-      cornerExternal: { label: 'Уголок внешний', unit: 'шт', companyPrice: 55, clientPrice: 150 },
-      substrate: { label: 'Подложка Tönlos', unit: 'м²', companyPrice: 90, clientPrice: 200 },
-      adhesive: { label: 'Клей Tönlos', unit: 'шт', companyPrice: 350, clientPrice: 700, perMeters: 15 },
-      embeddedPart: { label: 'Закладная под объект', unit: 'шт', companyPrice: 80, clientPrice: 250 },
-    },
-    installation: {
-      wallFabric: { label: 'Монтаж полотна', unit: 'м²', companyRate: 200, clientRate: 400 },
-      topProfile: { label: 'Монтаж верхнего профиля', unit: 'м', companyRate: 90, clientRate: 200 },
-      bottomProfile: { label: 'Монтаж нижнего профиля', unit: 'м', companyRate: 80, clientRate: 180 },
-      corner: { label: 'Оформление угла', unit: 'шт', companyRate: 150, clientRate: 350 },
-      opening: { label: 'Оформление проёма', unit: 'шт', companyRate: 250, clientRate: 600 },
-      column: { label: 'Огибание колонны', unit: 'шт', companyRate: 400, clientRate: 900 },
-      beam: { label: 'Огибание балки', unit: 'шт', companyRate: 350, clientRate: 800 },
-      niche: { label: 'Оформление ниши', unit: 'шт', companyRate: 300, clientRate: 700 },
-      cutout: { label: 'Вырез под элемент', unit: 'шт', companyRate: 100, clientRate: 250 },
-      heightSurcharge: { label: 'Доплата за высоту (>3.5м)', unit: '%', companyRate: 15, clientRate: 15 },
-    },
-    objectTreatments: {
-      door: { treatment: 'bypass', installRate: 'opening', needsEmbed: true },
-      window: { treatment: 'bypass', installRate: 'opening', needsEmbed: true },
-      battery: { treatment: 'cutout', installRate: 'cutout', needsEmbed: false },
-      tv: { treatment: 'bypass', installRate: 'opening', needsEmbed: true },
-      socket: { treatment: 'cutout', installRate: 'cutout', needsEmbed: false },
-      switch: { treatment: 'cutout', installRate: 'cutout', needsEmbed: false },
-      slopeWindow: { treatment: 'bypass', installRate: 'opening', needsEmbed: true },
-      slopeBalcony: { treatment: 'bypass', installRate: 'opening', needsEmbed: true },
-      balconyRight: { treatment: 'bypass', installRate: 'opening', needsEmbed: true },
-      balconyLeft: { treatment: 'bypass', installRate: 'opening', needsEmbed: true },
-      balconyDouble: { treatment: 'bypass', installRate: 'opening', needsEmbed: true },
-      columnRect: { treatment: 'wrap', installRate: 'column', needsEmbed: false },
-      columnRound: { treatment: 'wrap', installRate: 'column', needsEmbed: false },
-      beam: { treatment: 'wrap', installRate: 'beam', needsEmbed: false },
-      boxNiche: { treatment: 'bypass', installRate: 'niche', needsEmbed: true },
-      cutout: { treatment: 'cutout', installRate: 'cutout', needsEmbed: false },
-    },
+  // Себестоимость материалов IKS (те же ключи, что в iks — клиентские цены)
+  iksCompany: {
+    wallpaperPerSqm: 650,
+    profileBase: 240,
+    profileInnerCorner: 260,
+    profileOuterCorner: 260,
+    profileShadowBaseboard: 280,
+    profileWallCeiling: 265,
+    profileSeparator: 275,
+    tonlosAcousticFelt: 1000,
+    tonlosHeavyFelt: 1350,
+    fintek150: 2000,
+    insertID: 1200,
+    insertType1: 45,
+    insertType2: 65,
+    insertType3: 75,
+    adhesiveLiquidPer5L: 2500,
+    adhesiveSprayPer650ml: 450,
+  },
+  // Расценки монтажа стен (себестоимость / клиент)
+  iksInstall: {
+    fabricPerSqm: { label: 'Монтаж полотна', unit: 'м²', companyRate: 200, clientRate: 400 },
+    profilePerM: { label: 'Монтаж профиля', unit: 'м', companyRate: 90, clientRate: 200 },
+    opening: { label: 'Оформление проёма', unit: 'шт', companyRate: 250, clientRate: 600 },
+    cutout: { label: 'Вырез под элемент', unit: 'шт', companyRate: 100, clientRate: 250 },
+    column: { label: 'Огибание колонны', unit: 'шт', companyRate: 400, clientRate: 900 },
+    beam: { label: 'Огибание балки', unit: 'шт', companyRate: 350, clientRate: 800 },
+    niche: { label: 'Оформление ниши', unit: 'шт', companyRate: 300, clientRate: 700 },
+    heightSurchargePct: 15,
   },
 };
 
@@ -123,6 +111,8 @@ function getAll() {
   if (!data.sis.components) data.sis.components = defaults.sis.components;
   if (!data.upgrades) data.upgrades = defaults.upgrades;
   if (!data.iks) data.iks = defaults.iks;
+  if (!data.iksCompany) data.iksCompany = defaults.iksCompany;
+  if (!data.iksInstall) data.iksInstall = defaults.iksInstall;
   return data;
 }
 
@@ -146,16 +136,6 @@ function getOptionPrice(id) {
 
 function getProfilePrice() {
   return getAll().profile.price;
-}
-
-function getWallPrices() {
-  return getAll().walls || defaults.walls;
-}
-
-function saveWallPrices(wallData) {
-  const data = getAll();
-  data.walls = wallData;
-  save(data);
 }
 
 function getSisPrices() {
@@ -190,4 +170,4 @@ function getAiPriceContext() {
   };
 }
 
-module.exports = { getAll, save, getCeilingPrice, getOptionPrice, getProfilePrice, getWallPrices, saveWallPrices, getSisPrices, getUpgrades, formatPriceList, getAiPriceContext, defaults };
+module.exports = { getAll, save, getCeilingPrice, getOptionPrice, getProfilePrice, getSisPrices, getUpgrades, formatPriceList, getAiPriceContext, defaults };

@@ -20,9 +20,39 @@ function getPrices() {
   }
 }
 
+function getCompanyPrices() {
+  try {
+    const data = JSON.parse(fs.readFileSync(pricesFile, 'utf-8'));
+    return data.iksCompany || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function getInstallRates() {
+  try {
+    const data = JSON.parse(fs.readFileSync(pricesFile, 'utf-8'));
+    return data.iksInstall || {};
+  } catch (e) {
+    return {};
+  }
+}
+
 function price(key, fallback) {
   const p = getPrices();
   return p[key] !== undefined ? p[key] : fallback;
+}
+
+function companyPrice(key, fallback) {
+  const p = getCompanyPrices();
+  return p[key] !== undefined ? p[key] : fallback;
+}
+
+function installRate(key, field, fallback) {
+  const r = getInstallRates();
+  const item = r[key];
+  if (item && typeof item === 'object' && item[field] !== undefined) return item[field];
+  return fallback;
 }
 
 function resetPriceCache() { pricesCache = null; }
@@ -38,6 +68,27 @@ const INSERT_ID_BOX_METERS = 100;
 const PROFILE_LAMELLA_LENGTH = 2;
 
 const PROFILE_SKUS = ['AP5994', 'AP5995', 'AP5996', 'AP5997', 'AP5998', 'AP5999'];
+
+// ─── Object treatments (перенесено из walls.js) ─────────────────
+// Объекты на стенах: окна, двери, розетки, колонны и т.д.
+const OBJECT_TREATMENTS = {
+  door:          { area: 'opening', install: 'opening', needsEmbed: true,  profileAround: true },
+  window:        { area: 'opening', install: 'opening', needsEmbed: true,  profileAround: true },
+  tv:            { area: 'opening', install: 'opening', needsEmbed: true,  profileAround: true },
+  slopeWindow:   { area: 'opening', install: 'opening', needsEmbed: true,  profileAround: true },
+  slopeBalcony:  { area: 'opening', install: 'opening', needsEmbed: true,  profileAround: true },
+  balconyRight:  { area: 'opening', install: 'opening', needsEmbed: true,  profileAround: true },
+  balconyLeft:   { area: 'opening', install: 'opening', needsEmbed: true,  profileAround: true },
+  balconyDouble: { area: 'opening', install: 'opening', needsEmbed: true,  profileAround: true },
+  boxNiche:      { area: 'opening', install: 'niche',   needsEmbed: true,  profileAround: true },
+  battery:       { area: 'cutout',  install: 'cutout',  needsEmbed: false },
+  socket:        { area: 'cutout',  install: 'cutout',  needsEmbed: false, insert: 1 },
+  switch:        { area: 'cutout',  install: 'cutout',  needsEmbed: false, insert: 1 },
+  cutout:        { area: 'cutout',  install: 'cutout',  needsEmbed: false },
+  columnRect:    { area: 'none',    install: 'column',  needsEmbed: false },
+  columnRound:   { area: 'none',    install: 'column',  needsEmbed: false },
+  beam:          { area: 'none',    install: 'beam',    needsEmbed: false },
+};
 
 const PROFILES = [
   { sku: 'AP5994', article: 'АП 5994', name: 'Профиль ID базовый', priceKey: 'profileBase' },
@@ -184,6 +235,7 @@ function calculateInsulation(walls, insulationType) {
     type: insulationType, name: product.name, packs, packArea,
     unitPrice: price(product.priceKey, 0),
     total: packs * price(product.priceKey, 0),
+    priceKey: product.priceKey,
   };
 }
 
@@ -219,7 +271,7 @@ function calculateSockets(points) {
   return SOCKET_INSERT_TYPES.map(meta => {
     const quantity = byType.get(meta.type) || 0;
     const unitPrice = price(meta.priceKey, 0);
-    return { type: meta.type, name: meta.name, quantity, unitPrice, total: quantity * unitPrice };
+    return { type: meta.type, name: meta.name, quantity, unitPrice, total: quantity * unitPrice, priceKey: meta.priceKey };
   }).filter(line => line.quantity > 0);
 }
 
@@ -253,6 +305,7 @@ function runFullCalculation(input) {
       id: nextId(), name: `Бесшовное полотно MSD, ширина ${width} м`,
       sku: `MSD-${width}`, unit: 'м²', quantity: usedSqm,
       unitPrice: price('wallpaperPerSqm', 1200), total: roundMoney(usedSqm * price('wallpaperPerSqm', 1200)),
+      priceKey: 'wallpaperPerSqm',
       note: `Рулонов: ${count} × ${MAX_ROLL_LENGTH()} м`,
     });
     if (leftoverSqm > 0.001) {
@@ -271,6 +324,7 @@ function runFullCalculation(input) {
       id: nextId(), name: profile.name, sku: profile.article,
       unit: 'шт', quantity: profile.lamellasCount,
       unitPrice: profile.unitPrice, total: roundMoney(profile.lamellasCount * profile.unitPrice),
+      priceKey: profile.priceKey,
       note: `Ламель 2 пог. м, закуплено ${profile.purchasedMeters} м`,
     });
   }
@@ -283,6 +337,7 @@ function runFullCalculation(input) {
     materials.push({
       id: nextId(), name: 'Вставка ID (короб 100 м)', sku: 'ID-INSERT',
       unit: 'уп', quantity: insertId.boxes, unitPrice, total: roundMoney(insertId.boxes * unitPrice),
+      priceKey: 'insertID',
     });
     if (insertId.leftoverMeters > 0.001) {
       remnants.push({
@@ -310,6 +365,7 @@ function runFullCalculation(input) {
     materials.push({
       id: nextId(), name: socket.name, unit: 'шт',
       quantity: socket.quantity, unitPrice: socket.unitPrice, total: socket.total,
+      priceKey: socket.priceKey,
     });
   }
 
@@ -327,7 +383,8 @@ function runFullCalculation(input) {
     materials.push({
       id: nextId(), name: insulation.name, unit: 'уп',
       quantity: insulation.packs, unitPrice: insulation.unitPrice,
-      total: insulation.total, note: `Площадь покрытия упаковки: ${insulation.packArea} м²`,
+      total: insulation.total, priceKey: insulation.priceKey,
+      note: `Площадь покрытия упаковки: ${insulation.packArea} м²`,
     });
   }
 
@@ -337,23 +394,226 @@ function runFullCalculation(input) {
     materials.push({
       id: nextId(), name: 'Жидкий клей TÖNLOS, канистра 5 л', unit: 'шт',
       quantity: adhesive.liquidCans, unitPrice: price('adhesiveLiquidPer5L', 4500),
-      total: adhesive.liquidTotal, note: `Потребность ~${adhesive.litersNeeded} л`,
+      total: adhesive.liquidTotal, priceKey: 'adhesiveLiquidPer5L', note: `Потребность ~${adhesive.litersNeeded} л`,
     });
   }
   if (adhesive.sprayCans > 0) {
     materials.push({
       id: nextId(), name: 'Аэрозольный клей TÖNLOS, 650 мл', unit: 'шт',
       quantity: adhesive.sprayCans, unitPrice: price('adhesiveSprayPer650ml', 850),
-      total: adhesive.sprayTotal,
+      total: adhesive.sprayTotal, priceKey: 'adhesiveSprayPer650ml',
     });
   }
 
   const grandTotalRub = roundMoney(sumBy(materials, m => m.total));
   const remnantsTotalRub = roundMoney(sumBy(remnants, r => r.totalRub));
 
+  // ─── Себестоимость (company) ─────────────────────────────────
+  const grandTotalCompany = roundMoney(sumBy(materials, m => {
+    if (!m.priceKey) return 0; // деревянные закладные — цена по запросу
+    return roundMoney(m.quantity * companyPrice(m.priceKey, m.unitPrice));
+  }));
+  const profitRub = roundMoney(grandTotalRub - grandTotalCompany);
+  const marginPct = grandTotalRub > 0 ? round2((profitRub / grandTotalRub) * 100) : 0;
+
   return {
     materials, remnants, remnantsTotalRub, grandTotalRub, totalAreaSqm: totalArea,
+    grandTotalCompany, profitRub, marginPct,
     profiles, packed, pieces, walls: walls.length,
+  };
+}
+
+// ─── Detailed calculation for installer (объекты, маржа) ───────
+// Принимает формат installer.html: walls[{index,width,height,objects[]}]
+// Возвращает формат, совместимый с installer.html и export.js
+function calcDetailed(input) {
+  const projectHeight = parseFloat(input.height) || 2.7;
+  const wastePct = parseFloat(input.wastePercent) || 10;
+  const rollWidth = parseFloat(input.rollWidth) || 3.2;
+  const wallsIn = input.walls || [];
+
+  // 1. Разбор стен и объектов
+  const parsed = wallsIn.map((w, i) => {
+    const width = parseFloat(w.width) || 0;
+    const height = parseFloat(w.height) || projectHeight;
+    const objects = (w.objects || []).map(o => ({
+      type: o.type || 'cutout',
+      width: parseFloat(o.width) || 0.5,
+      height: parseFloat(o.height) || 0.5,
+      count: Math.max(1, parseInt(o.count) || 1),
+    }));
+
+    let openingArea = 0, openingsBaseMeters = 0, embedCount = 0;
+    let openingCount = 0, cutoutCount = 0, columnCount = 0, beamCount = 0, nicheCount = 0;
+    const socketPoints = [];
+
+    for (const o of objects) {
+      const t = OBJECT_TREATMENTS[o.type] || OBJECT_TREATMENTS.cutout;
+      if (t.area === 'opening') openingArea += o.width * o.height * o.count;
+      if (t.profileAround) openingsBaseMeters += 2 * (o.width + o.height) * o.count;
+      if (t.needsEmbed) embedCount += o.count;
+      if (t.insert) socketPoints.push({ type: t.insert, count: o.count });
+      if (t.install === 'opening') openingCount += o.count;
+      else if (t.install === 'cutout') cutoutCount += o.count;
+      else if (t.install === 'column') columnCount += o.count;
+      else if (t.install === 'beam') beamCount += o.count;
+      else if (t.install === 'niche') nicheCount += o.count;
+    }
+
+    const wallArea = round2(width * height);
+    return {
+      index: w.index !== undefined ? w.index : i,
+      width, height, wallArea,
+      openingArea: round2(openingArea),
+      netArea: round2(Math.max(0, wallArea - openingArea)),
+      openingsBaseMeters: round2(openingsBaseMeters),
+      embedCount, openingCount, cutoutCount, columnCount, beamCount, nicheCount,
+      socketPoints,
+      objectsCount: objects.length,
+    };
+  });
+
+  // 2. IKS-стены для движка (раскрой рулонов, профили)
+  const iksWalls = parsed.map(p => ({
+    id: `wall-${p.index}`,
+    label: `Стена ${p.index + 1}`,
+    lengthL: p.width,
+    heightH: p.height,
+    rollWidth,
+    drapingMode: 'single',
+    zones: [],
+    profileMeters: {
+      AP5994: round2(p.width),          // базовый низ
+      AP5995: round2(2 * p.height),     // внутренние углы (2 на стену)
+      AP5996: 0,
+      AP5997: round2(p.width),          // теневой плинтус
+      AP5998: round2(p.width),          // стена-потолок
+      AP5999: 0,
+    },
+    openingsBaseMeters: p.openingsBaseMeters,
+  }));
+
+  const allSockets = parsed.flatMap(p => p.socketPoints);
+  const embedTotal = parsed.reduce((s, p) => s + p.embedCount, 0);
+
+  const result = runFullCalculation({
+    walls: iksWalls,
+    socketPoints: allSockets,
+    woodenInsertCount: embedTotal,
+    insulationType: input.insulationType || 'none',
+    includeLiquidGlue: input.includeGlue !== false,
+    includeSprayGlue: input.includeSpray || false,
+  });
+
+  // 3. Сводные площади
+  const totals = parsed.reduce((a, p) => ({
+    wallArea: round2(a.wallArea + p.wallArea),
+    openingArea: round2(a.openingArea + p.openingArea),
+    netArea: round2(a.netArea + p.netArea),
+    openingCount: a.openingCount + p.openingCount,
+    cutoutCount: a.cutoutCount + p.cutoutCount,
+    columnCount: a.columnCount + p.columnCount,
+    beamCount: a.beamCount + p.beamCount,
+    nicheCount: a.nicheCount + p.nicheCount,
+  }), { wallArea: 0, openingArea: 0, netArea: 0, openingCount: 0, cutoutCount: 0, columnCount: 0, beamCount: 0, nicheCount: 0 });
+
+  const canvasArea = round2(sumBy(result.pieces, p => p.areaSqm));
+  const perimeter = round2(parsed.reduce((s, p) => s + p.width, 0));
+
+  // 4. Стоимость монтажа
+  const totalProfileM = totalPurchasedProfileMeters(result.profiles);
+  const inst = {
+    fabric: { qty: totals.netArea, company: installRate('fabricPerSqm', 'companyRate', 200), client: installRate('fabricPerSqm', 'clientRate', 400) },
+    profile: { qty: totalProfileM, company: installRate('profilePerM', 'companyRate', 90), client: installRate('profilePerM', 'clientRate', 200) },
+    opening: { qty: totals.openingCount, company: installRate('opening', 'companyRate', 250), client: installRate('opening', 'clientRate', 600) },
+    cutout: { qty: totals.cutoutCount, company: installRate('cutout', 'companyRate', 100), client: installRate('cutout', 'clientRate', 250) },
+    column: { qty: totals.columnCount, company: installRate('column', 'companyRate', 400), client: installRate('column', 'clientRate', 900) },
+    beam: { qty: totals.beamCount, company: installRate('beam', 'companyRate', 350), client: installRate('beam', 'clientRate', 800) },
+    niche: { qty: totals.nicheCount, company: installRate('niche', 'companyRate', 300), client: installRate('niche', 'clientRate', 700) },
+  };
+  let installCompany = round2(sumBy(Object.values(inst), r => r.qty * r.company));
+  let installClient = round2(sumBy(Object.values(inst), r => r.qty * r.client));
+
+  // Доплата за высоту > 3.5 м (на монтаж полотна и профиля)
+  const heightSurchargePct = (() => { const r = getInstallRates(); return r.heightSurchargePct !== undefined ? r.heightSurchargePct : 15; })();
+  let heightSurchargeCompany = 0, heightSurchargeClient = 0;
+  if (projectHeight > 3.5) {
+    const baseCompany = inst.fabric.qty * inst.fabric.company + inst.profile.qty * inst.profile.company;
+    const baseClient = inst.fabric.qty * inst.fabric.client + inst.profile.qty * inst.profile.client;
+    heightSurchargeCompany = round2(baseCompany * heightSurchargePct / 100);
+    heightSurchargeClient = round2(baseClient * heightSurchargePct / 100);
+    installCompany = round2(installCompany + heightSurchargeCompany);
+    installClient = round2(installClient + heightSurchargeClient);
+  }
+
+  const materialCostClient = result.grandTotalRub;
+  const materialCostCompany = result.grandTotalCompany;
+  const totalClient = round2(materialCostClient + installClient);
+  const totalCompany = round2(materialCostCompany + installCompany);
+  const profit = round2(totalClient - totalCompany);
+  const margin = totalClient > 0 ? round2((profit / totalClient) * 100) : 0;
+
+  // 5. BOM с двойными ценами
+  const bom = result.materials.map(m => {
+    const cp = m.priceKey ? companyPrice(m.priceKey, m.unitPrice) : 0;
+    return {
+      name: m.name, quantity: m.quantity, unit: m.unit,
+      companyPrice: cp, clientPrice: m.unitPrice,
+      totalCompany: roundMoney(m.quantity * cp), totalClient: m.total,
+    };
+  });
+
+  // 6. По стенам (пропорциональная аллокация по чистой площади)
+  const wallsOut = parsed.map(p => {
+    const share = totals.netArea > 0 ? p.netArea / totals.netArea : 0;
+    return {
+      index: p.index, width: p.width, height: p.height,
+      wallArea: p.wallArea, openingArea: p.openingArea, netArea: p.netArea,
+      openingCount: p.openingCount, objects: p.objectsCount,
+      wallTotalCompany: round2(totalCompany * share),
+      wallTotalClient: round2(totalClient * share),
+    };
+  });
+
+  // 7. Карта раскроя из IKS (реальный раскрой рулонов)
+  const wallIndexByLabel = new Map(parsed.map(p => [`Стена ${p.index + 1}`, p.index]));
+  const cutList = [];
+  for (const roll of result.packed) {
+    roll.cuts.forEach((cut, ci) => {
+      cutList.push({
+        wall: wallIndexByLabel.get(cut.wallLabel) !== undefined ? wallIndexByLabel.get(cut.wallLabel) : 0,
+        element: `Полотно ${roll.rollWidth} м (рулон #${roll.rollIndex})`,
+        width: roll.rollWidth, height: cut.cutLength,
+      });
+    });
+  }
+  parsed.forEach(p => {
+    cutList.push({ wall: p.index, element: 'Профиль верхний', length: p.width });
+    cutList.push({ wall: p.index, element: 'Профиль нижний', length: p.width });
+  });
+
+  return {
+    summary: {
+      wallCount: parsed.length,
+      totalWallArea: totals.wallArea,
+      openingArea: totals.openingArea,
+      netArea: totals.netArea,
+      canvasArea,
+      wastePercent: wastePct,
+      perimeter,
+      cornerCount: parsed.length * 2,
+      height: projectHeight,
+    },
+    pricing: {
+      materialCostCompany, materialCostClient,
+      installCostCompany: installCompany, installCostClient: installClient,
+      heightSurchargeCompany, heightSurchargeClient,
+      totalCompany, totalClient, profit, margin,
+    },
+    bom,
+    walls: wallsOut,
+    cutList,
+    iks: { materials: result.materials, remnants: result.remnants, packed: result.packed, profiles: result.profiles },
   };
 }
 
@@ -396,10 +656,10 @@ function quickEstimate(params) {
 }
 
 module.exports = {
-  runFullCalculation, quickEstimate, calculateProfiles, totalPurchasedProfileMeters,
+  runFullCalculation, quickEstimate, calcDetailed, calculateProfiles, totalPurchasedProfileMeters,
   fabricPiecesFromWalls, packRolls, totalWallArea,
   calculateInsulation, calculateAdhesive, calculateInsertIdBoxes, calculateSockets,
-  price, resetPriceCache, PROFILES, ROLL_WIDTHS, MAX_ROLL_LENGTH, CUT_ALLOWANCE,
-  PROFILE_SKUS, INSULATION_PRODUCTS, SOCKET_INSERT_TYPES,
+  price, companyPrice, installRate, resetPriceCache, PROFILES, ROLL_WIDTHS, MAX_ROLL_LENGTH, CUT_ALLOWANCE,
+  PROFILE_SKUS, INSULATION_PRODUCTS, SOCKET_INSERT_TYPES, OBJECT_TREATMENTS,
   round2, ceilInt, roundMoney, sumBy,
 };
