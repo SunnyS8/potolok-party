@@ -13,7 +13,7 @@
     { "src": "^/api/(.*)$", "dest": "/server/index.js" },
     { "src": "^/calculator/?$", "dest": "/public/calculator/index.html" },
     { "src": "^/calculator/(.*)$", "dest": "/public/calculator/$1" },
-    { "src": "^/$", "dest": "/index.html" },
+    { "src": "^/$", "dest": "/public/index.html" },
     { "src": "^/(.*)$", "dest": "/public/$1" }
   ]
 }
