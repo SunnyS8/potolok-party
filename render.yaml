@@ -1,9 +1,10 @@
 # Render Blueprint — деплой через GitHub: New > Blueprint > этот репозиторий
+# План: free (без диска — данные эфемерны) | starter+ (диск /var/data монтируется автоматически)
 services:
   - type: web
     name: potolok-party
     runtime: node
-    plan: starter
+    plan: free
     buildCommand: npm install
     startCommand: node server/index.js
     healthCheckPath: /api/health
