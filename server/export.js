@@ -210,4 +210,161 @@ async function generateWallXlsx(project, calcResult) {
   return await wb.xlsx.writeBuffer();
 }
 
-module.exports = { generateWallPdf, generateWallXlsx };
+function money(v) {
+  return (typeof v === 'number' ? v.toLocaleString('ru-RU', { maximumFractionDigits: 2 }) : '0') + ' ₽';
+}
+
+function generateEstimatePdf({ title, items, grandTotal, upgradesTotal = 0, discountLabel, discountSavings = 0 }) {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ size: 'A4', margin: 40, font: 'Helvetica' });
+      const chunks = [];
+      doc.on('data', c => chunks.push(c));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      doc.fontSize(18).text('Флюкс — Смета', { align: 'center' });
+      doc.moveDown(0.5);
+      if (title) {
+        doc.fontSize(11).fillColor('#666').text(title, { align: 'center' });
+        doc.fillColor('#000');
+        doc.moveDown(0.6);
+      }
+
+      doc.moveTo(40, doc.y).lineTo(520, doc.y).stroke('#ddd');
+      doc.moveDown(0.6);
+
+      doc.fontSize(12).font('Helvetica-Bold').text('Состав сметы');
+      doc.moveDown(0.4);
+      doc.font('Helvetica');
+
+      const startY = doc.y;
+      const rows = Array.isArray(items) ? items.filter(i => i.total > 0) : [];
+      rows.forEach((row) => {
+        const name = row.name || '—';
+        const qty = typeof row.quantity === 'number' ? row.quantity.toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + ' ' + (row.unit || '') : '—';
+        doc.fontSize(10).text(name, 50, doc.y, { width: 250 });
+        doc.text(qty, 300, doc.y, { width: 90, align: 'right' });
+        doc.font('Helvetica-Bold').text(money(row.total), 390, doc.y - 12, { width: 130, align: 'right' });
+        doc.font('Helvetica');
+        doc.moveDown(0.35);
+      });
+      doc.moveTo(40, startY + rows.length * 15.5 + 5).lineTo(520, startY + rows.length * 15.5 + 5).stroke('#eee');
+      doc.moveDown(0.6);
+
+      if (discountLabel && discountSavings > 0) {
+        doc.fontSize(11).text(discountLabel, { width: 350 });
+        doc.font('Helvetica-Bold').fillColor('#0a7a3d').text('–' + money(discountSavings), { align: 'right' });
+        doc.font('Helvetica').fillColor('#000');
+      }
+
+      if (upgradesTotal > 0) {
+        doc.fontSize(11).text('Дополнительные услуги', { width: 350 });
+        doc.font('Helvetica-Bold').text(money(upgradesTotal), { align: 'right' });
+        doc.font('Helvetica');
+      }
+
+      doc.moveDown(0.6);
+      doc.moveTo(40, doc.y).lineTo(520, doc.y).stroke('#ddd');
+      doc.moveDown(0.6);
+      doc.fontSize(14).font('Helvetica-Bold').text('Итого: ' + money(grandTotal), { align: 'right' });
+      doc.font('Helvetica');
+
+      doc.moveDown(1.5);
+      doc.fontSize(9).fillColor('#888').text('Смета носит предварительный характер. Точная стоимость после замера.', { align: 'center' });
+
+      doc.end();
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+function csvEscape(v) {
+  const s = v == null ? '' : String(v);
+  return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function toCsv(rows) {
+  return rows.map(r => r.map(csvEscape).join(';')).join('\r\n');
+}
+
+function exportLeadsCsv(leads) {
+  const header = ['ID', 'Дата', 'Имя', 'Телефон', 'Email', 'Источник', 'Продукт', 'Тип потолка', 'Площадь', 'Стены', 'Площадь стен', 'Система стен', 'Светильники', 'Статус', 'Комментарий'];
+  const rows = leads.map(l => [
+    l.id, l.created_at || '', l.name || '', l.phone || '', l.email || '',
+    l.source || '', l.productType || '', l.ceilingType || '', l.area ?? '',
+    l.hasWalls ? 'да' : 'нет', l.wallArea ?? '', l.wallSystem || '',
+    l.hasLights ? 'да' : 'нет', l.status || '', l.notes || '',
+  ]);
+  return toCsv([header, ...rows]);
+}
+
+async function exportLeadsXlsx(leads) {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Флюкс';
+  wb.created = new Date();
+  const ws = wb.addWorksheet('Лиды');
+  ws.columns = [
+    { header: 'ID', key: 'id', width: 6 },
+    { header: 'Дата', key: 'date', width: 20 },
+    { header: 'Имя', key: 'name', width: 20 },
+    { header: 'Телефон', key: 'phone', width: 18 },
+    { header: 'Email', key: 'email', width: 22 },
+    { header: 'Источник', key: 'source', width: 14 },
+    { header: 'Продукт', key: 'product', width: 12 },
+    { header: 'Тип потолка', key: 'ceiling', width: 18 },
+    { header: 'Площадь', key: 'area', width: 10 },
+    { header: 'Стены', key: 'walls', width: 8 },
+    { header: 'Площадь стен', key: 'wallArea', width: 12 },
+    { header: 'Система стен', key: 'wallSystem', width: 14 },
+    { header: 'Статус', key: 'status', width: 12 },
+    { header: 'Комментарий', key: 'notes', width: 30 },
+  ];
+  leads.forEach(l => {
+    ws.addRow({
+      id: l.id, date: l.created_at || '', name: l.name || '', phone: l.phone || '', email: l.email || '',
+      source: l.source || '', product: l.productType || '', ceiling: l.ceilingType || '', area: l.area ?? '',
+      walls: l.hasWalls ? 'да' : 'нет', wallArea: l.wallArea ?? '', wallSystem: l.wallSystem || '',
+      status: l.status || '', notes: l.notes || '',
+    });
+  });
+  ws.autoFilter = { from: 'A1', to: { row: 1, column: ws.columnCount } };
+  return await wb.xlsx.writeBuffer();
+}
+
+function exportDealsCsv(deals) {
+  const header = ['ID', 'Лид', 'Тип потолка', 'Сумма', 'Площадь', 'Статус', 'Дата', 'Обновлено'];
+  const rows = deals.map(d => [
+    d.id, d.leadId ?? '', d.ceilingType || '', d.estimatedPrice ?? '', d.area ?? '',
+    d.status || '', d.created_at || '', d.updated_at || '',
+  ]);
+  return toCsv([header, ...rows]);
+}
+
+async function exportDealsXlsx(deals) {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Флюкс';
+  wb.created = new Date();
+  const ws = wb.addWorksheet('Сделки');
+  ws.columns = [
+    { header: 'ID', key: 'id', width: 6 },
+    { header: 'Лид', key: 'leadId', width: 8 },
+    { header: 'Тип потолка', key: 'ceiling', width: 18 },
+    { header: 'Сумма', key: 'price', width: 14 },
+    { header: 'Площадь', key: 'area', width: 10 },
+    { header: 'Статус', key: 'status', width: 18 },
+    { header: 'Дата', key: 'date', width: 20 },
+    { header: 'Обновлено', key: 'updated', width: 20 },
+  ];
+  deals.forEach(d => {
+    ws.addRow({
+      id: d.id, leadId: d.leadId ?? '', ceiling: d.ceilingType || '', price: d.estimatedPrice ?? '',
+      area: d.area ?? '', status: d.status || '', date: d.created_at || '', updated: d.updated_at || '',
+    });
+  });
+  ws.autoFilter = { from: 'A1', to: { row: 1, column: ws.columnCount } };
+  return await wb.xlsx.writeBuffer();
+}
+
+module.exports = { generateWallPdf, generateWallXlsx, generateEstimatePdf, exportLeadsCsv, exportLeadsXlsx, exportDealsCsv, exportDealsXlsx };

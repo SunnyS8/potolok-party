@@ -50,18 +50,37 @@
         }
         .login-card button:hover { background: var(--accent-primary-hover); }
         .login-card .hint { font-size: 12px; color: var(--text-secondary); margin-top: 16px; }
+        .role-row { display: flex; gap: 10px; margin-top: 8px; }
+        .role-row a {
+            flex: 1; padding: 12px; font-size: 13px; font-weight: 500;
+            border: 1px solid var(--border-medium); border-radius: var(--radius-md);
+            color: var(--text-primary); text-decoration: none; transition: all 0.2s;
+        }
+        .role-row a:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
     </style>
 </head>
 <body>
     <div class="login-card">
         <div class="logo">Флюкс <span>| СИС</span></div>
-        <h1>Вход в систему</h1>
-        <p>Введите номер телефона, чтобы войти</p>
+        <h1>Панель менеджера</h1>
+        <p>Выберите способ входа</p>
         <form id="loginForm" action="/manager.html">
-            <input type="tel" placeholder="+7 (999) 123-45-67" pattern="[\+]\d{1}\s?[\(]\d{3}[\)]\s?\d{3}[\-]\d{2}[\-]\d{2}" required>
-            <button type="submit">Войти</button>
-            <div class="hint">Для демо-доступа используйте любой номер</div>
+            <input type="password" placeholder="Ключ доступа (если задан)" id="accessKey">
+            <button type="submit">Войти менеджером</button>
+            <div class="hint">Ключ задаёт администратор. Если ключ не настроен — вход открыт.</div>
         </form>
+        <div class="role-row">
+            <a href="/manager.html?demo=1">Демо-режим</a>
+            <a href="/manager.html?guest=1">Гостевой просмотр</a>
+        </div>
     </div>
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const key = document.getElementById('accessKey').value.trim();
+            if (key) localStorage.setItem('auth_token', key);
+            window.location.href = '/manager.html';
+        });
+    </script>
 </body>
 </html>

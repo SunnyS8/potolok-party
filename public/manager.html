@@ -61,12 +61,53 @@
     .deal-actions select { padding: 0.25rem 0.4rem; border: 1px solid var(--border-medium); border-radius: 4px; font-size: 0.7rem; }
     .deal-actions button { padding: 0.25rem 0.5rem; border: none; border-radius: 4px; font-size: 0.7rem; cursor: pointer; background: var(--accent-primary); color: #fff; }
 
+    .toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 1rem; }
+    .toolbar input[type="search"], .toolbar select { padding: 0.4rem 0.6rem; border: 1px solid var(--border-medium); border-radius: 6px; font-size: 0.8125rem; outline: none; background: var(--surface-card); color: var(--text-primary); font-family: var(--font-sans); }
+    .toolbar input[type="search"] { min-width: 220px; flex: 1; }
+    .toolbar input:focus, .toolbar select:focus { border-color: var(--accent-primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    .toolbar .spacer { flex: 1; }
+
+    .row-actions { display: flex; gap: 0.3rem; }
+    .row-actions button { padding: 0.25rem 0.5rem; border: 1px solid var(--border-light); border-radius: 4px; font-size: 0.7rem; cursor: pointer; background: var(--surface-card); color: var(--accent-primary); }
+    .row-actions button:hover { border-color: var(--accent-primary); background: #EFF6FF; }
+    .row-actions button.btn-danger { color: var(--accent-error); }
+    .row-actions button.btn-danger:hover { border-color: var(--accent-error); background: #FEF2F2; }
+
+    .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.45); display: none; align-items: flex-start; justify-content: center; z-index: 10000; padding: 2rem 1rem; overflow-y: auto; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--surface-card); border-radius: 10px; width: 640px; max-width: 100%; box-shadow: 0 16px 48px rgba(0,0,0,0.18); }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-light); }
+    .modal-header h3 { font-size: 1.05rem; font-weight: 600; }
+    .modal-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-secondary); line-height: 1; }
+    .modal-body { padding: 1.25rem; }
+    .modal-section { margin-bottom: 1.25rem; }
+    .modal-section h4 { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.6rem; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1rem; }
+    .info-grid .field { display: flex; flex-direction: column; gap: 0.15rem; }
+    .info-grid .field .k { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+    .info-grid .field .v { font-size: 0.85rem; font-weight: 500; }
+
+    .comment-item { padding: 0.6rem 0; border-bottom: 1px solid var(--border-light); }
+    .comment-item:last-child { border-bottom: none; }
+    .comment-item .c-meta { font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 0.2rem; }
+    .comment-item .c-text { font-size: 0.85rem; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+    .comment-form { display: flex; gap: 0.5rem; margin-top: 0.6rem; }
+    .comment-form input { flex: 1; padding: 0.5rem 0.75rem; border: 1px solid var(--border-medium); border-radius: 6px; font-size: 0.8125rem; outline: none; }
+    .comment-form input:focus { border-color: var(--accent-primary); }
+    .comment-form button { padding: 0.5rem 1rem; background: var(--accent-primary); color: #fff; border: none; border-radius: 6px; font-size: 0.8125rem; cursor: pointer; font-weight: 500; }
+
+    .role-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 500; }
+    .role-badge.manager { background: #F0FDF4; color: var(--accent-success); }
+    .role-badge.demo { background: #FFFBEB; color: var(--accent-warning); }
+    .role-badge.guest { background: #F1F5F9; color: var(--text-secondary); }
+
     @media (max-width: 768px) {
       .mgr-layout { grid-template-columns: 1fr; }
       .mgr-sidebar { display: flex; overflow-x: auto; padding: 0.5rem; border-right: none; border-bottom: 1px solid var(--border-light); }
       .mgr-sidebar nav { flex-direction: row; }
       .mgr-sidebar a { border-left: none; border-bottom: 2px solid transparent; white-space: nowrap; padding: 0.5rem 0.75rem; }
       .mgr-sidebar a.active { border-left: none; border-bottom-color: var(--accent-primary); }
+      .info-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -109,22 +150,60 @@
         </div>
         <h3 style="font-size:1rem;font-weight:600;margin-bottom:0.5rem;">Популярные типы потолков</h3>
         <div class="table-wrap"><table><thead><tr><th>Тип</th><th>Запросов</th></tr></thead><tbody id="popularTypesBody"></tbody></table></div>
-        <h3 style="font-size:1rem;font-weight:600;margin:1rem 0 0.5rem;">Лиды по источникам</h3>
-        <div class="table-wrap" style="max-width:400px;"><table><thead><tr><th>Источник</th><th>Кол-во</th></tr></thead><tbody id="sourceStatsBody"></tbody></table></div>
+        <h3 style="font-size:1rem;font-weight:600;margin:1rem 0 0.5rem;">Лиды и конверсия по источникам</h3>
+        <div class="table-wrap" style="max-width:620px;"><table><thead><tr><th>Источник</th><th>Лиды</th><th>Сделки</th><th>Выиграно</th><th>Конверсия</th></tr></thead><tbody id="sourceStatsBody"></tbody></table></div>
+        <h3 style="font-size:1rem;font-weight:600;margin:1rem 0 0.5rem;">Активность за 30 дней</h3>
+        <div class="table-wrap" style="max-width:620px;padding:1rem;">
+          <div style="display:flex;gap:1rem;font-size:0.75rem;color:var(--text-secondary);margin-bottom:0.5rem;">
+            <span><span style="display:inline-block;width:10px;height:10px;background:var(--accent-primary);border-radius:2px;margin-right:4px;"></span>Лиды</span>
+            <span><span style="display:inline-block;width:10px;height:10px;background:var(--accent-success);border-radius:2px;margin-right:4px;"></span>Сделки</span>
+          </div>
+          <svg id="trendChart" width="100%" viewBox="0 0 600 180" preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
       </section>
 
       <!-- Leads -->
       <section class="mgr-section" id="section-leads">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
           <h2 style="font-size:1.25rem;font-weight:600;">Лиды</h2>
-          <a href="/api/analytics/export?format=csv" class="btn btn-primary" style="font-size:0.75rem;padding:0.4rem 0.75rem;">CSV</a>
+          <span class="role-badge" id="roleBadgeLeads"></span>
         </div>
-        <div class="table-wrap"><table><thead><tr><th>ID</th><th>Имя</th><th>Телефон</th><th>Источник</th><th>Тип потолка</th><th>Статус</th><th>Дата</th></tr></thead><tbody id="leadsBody"></tbody></table></div>
+        <div class="toolbar">
+          <input type="search" id="leadSearch" placeholder="Поиск по имени, телефону, ID...">
+          <select id="leadStatusFilter">
+            <option value="">Все статусы</option>
+            <option value="new">Новый</option>
+            <option value="deal">В работе</option>
+            <option value="won">Выигран</option>
+            <option value="lost">Потерян</option>
+          </select>
+          <span class="spacer"></span>
+          <button class="btn" onclick="exportLeads('csv')" style="font-size:0.75rem;padding:0.4rem 0.75rem;">CSV</button>
+          <button class="btn" onclick="exportLeads('xlsx')" style="font-size:0.75rem;padding:0.4rem 0.75rem;">XLSX</button>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>ID</th><th>Имя</th><th>Телефон</th><th>Источник</th><th>Тип потолка</th><th>Статус</th><th>Дата</th><th>Действия</th></tr></thead><tbody id="leadsBody"></tbody></table></div>
       </section>
 
       <!-- Deals -->
       <section class="mgr-section" id="section-deals">
-        <h2 style="font-size:1.25rem;font-weight:600;margin-bottom:1rem;">Сделки</h2>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+          <h2 style="font-size:1.25rem;font-weight:600;">Сделки</h2>
+          <span class="role-badge" id="roleBadgeDeals"></span>
+        </div>
+        <div class="toolbar">
+          <input type="search" id="dealSearch" placeholder="Поиск по имени, телефону, ID...">
+          <select id="dealStatusFilter">
+            <option value="">Все стадии</option>
+            <option value="negotiation">Переговоры</option>
+            <option value="measurement_scheduled">Замер назначен</option>
+            <option value="measurement_done">Замер выполнен</option>
+            <option value="won">Выиграна</option>
+            <option value="lost">Потеряна</option>
+          </select>
+          <span class="spacer"></span>
+          <button class="btn" onclick="exportDeals('csv')" style="font-size:0.75rem;padding:0.4rem 0.75rem;">CSV</button>
+          <button class="btn" onclick="exportDeals('xlsx')" style="font-size:0.75rem;padding:0.4rem 0.75rem;">XLSX</button>
+        </div>
         <div class="table-wrap"><table><thead><tr><th>ID</th><th>Лид</th><th>Тип потолка</th><th>Сумма</th><th>Статус</th><th>Действия</th><th>Дата</th></tr></thead><tbody id="dealsBody"></tbody></table></div>
       </section>
 
@@ -210,6 +289,7 @@
             <button class="template-btn" data-template="measurement_confirmation">Подтвердить замер</button>
             <button class="template-btn" data-template="quote_followup">После сметы</button>
             <button class="template-btn" data-template="installation_reminder">Напомнить об установке</button>
+            <button class="template-btn" data-template="bundle_offer">Комплекс потолок+стены</button>
           </div>
           <div class="assistant-input">
             <input type="text" id="assistantInput" placeholder="Спросите ассистента..." maxlength="500">
@@ -218,6 +298,17 @@
         </div>
       </section>
     </main>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle">Детали</h3>
+        <button class="modal-close" id="modalClose">✕</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
   </div>
 
   <script src="/js/ux.js"></script>

@@ -77,9 +77,10 @@
 Могу помочь с выбором потолка, рассказать о ценах или вызвать замерщика. Что вас интересует?</div>
     </div>
     <div class="chat-actions" id="chatActions">
-      <button class="chat-action-btn" data-msg="Расскажи о типах потолков">Типы</button>
-      <button class="chat-action-btn" data-msg="Сколько стоят потолки?">Цены</button>
-      <button class="chat-action-btn" data-msg="Вызвать замерщика">Замер</button>
+      <button class="chat-action-btn" data-msg="Мне нужен расчёт">Мне нужен расчёт</button>
+      <button class="chat-action-btn" data-msg="Скажите цену">Скажите цену</button>
+      <button class="chat-action-btn" data-msg="Заказать замер">Заказать замер</button>
+      <button class="chat-action-btn" data-msg="Позвоните мне">Позвоните мне</button>
     </div>
     <div class="chat-input-area">
       <input class="chat-input" id="chatInput" placeholder="Напишите сообщение..." maxlength="500">
@@ -174,7 +175,7 @@
     }
   }
 
-  function showLeadForm() {
+  function showLeadForm(title) {
     const existing = document.getElementById('leadFormWidget');
     if (existing) return;
 
@@ -182,7 +183,7 @@
     form.id = 'leadFormWidget';
     form.style.cssText = 'padding:0.75rem 1rem;border-top:1px solid var(--border-light);background:var(--surface-card);display:flex;flex-direction:column;gap:0.5rem;';
     form.innerHTML = `
-      <div style="font-size:1rem;font-weight:600;color:var(--text-primary);margin-bottom:0.25rem;">Заявка на замер</div>
+      <div style="font-size:1rem;font-weight:600;color:var(--text-primary);margin-bottom:0.25rem;">${title || 'Заявка на замер'}</div>
       <input type="text" id="wfName" placeholder="Имя" style="padding:0.5rem 0.75rem;border:1px solid var(--border-medium);border-radius:6px;font-size:0.875rem;outline:none;background:var(--surface-card);color:var(--text-primary);font-family:'Inter',sans-serif;">
       <input type="tel" id="wfPhone" placeholder="Телефон" style="padding:0.5rem 0.75rem;border:1px solid var(--border-medium);border-radius:6px;font-size:0.875rem;outline:none;background:var(--surface-card);color:var(--text-primary);font-family:'Inter',sans-serif;">
       <select id="wfCeiling" style="padding:0.5rem 0.75rem;border:1px solid var(--border-medium);border-radius:6px;font-size:0.875rem;outline:none;background:var(--surface-card);color:var(--text-primary);font-family:'Inter',sans-serif;">
@@ -224,7 +225,17 @@
 
   actions.addEventListener('click', (e) => {
     const btn = e.target.closest('.chat-action-btn');
-    if (btn) sendMessage(btn.dataset.msg);
+    if (!btn) return;
+    const msg = btn.dataset.msg;
+    if (msg === 'Заказать замер' || msg === 'Позвоните мне') {
+      addMessage('user', msg);
+      addMessage('bot', msg === 'Позвоните мне'
+        ? 'Оставьте телефон — и мы перезвоним в течение 15 минут.'
+        : 'Оставьте контакты, и мы договоримся о бесплатном замере.');
+      showLeadForm();
+      return;
+    }
+    sendMessage(msg);
   });
 
   document.addEventListener('click', (e) => {

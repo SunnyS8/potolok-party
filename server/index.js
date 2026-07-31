@@ -17,6 +17,7 @@ const iks = require('./iks-calculator');
 const combinedCalc = require('./combined');
 const exp = require('./export');
 const clientCabinet = require('./client');
+const integrations = require('./integrations');
 
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -33,13 +34,28 @@ const chatLimiter = rateLimit({
 });
 
 const AUTH_TOKEN = process.env.AUTH_TOKEN;
+const DEMO_TOKEN = process.env.DEMO_TOKEN || 'demo';
 
-function requireAuth(req, res, next) {
-  if (!AUTH_TOKEN) return next();
+function getRole(req) {
   const header = req.headers.authorization;
   const token = header && header.startsWith('Bearer ') ? header.slice(7) : req.query.token;
-  if (token === AUTH_TOKEN) return next();
-  res.status(401).json({ error: 'Не авторизован' });
+  if (token === DEMO_TOKEN || req.query.demo === '1' || req.query.demo === 'true') return 'demo';
+  if (AUTH_TOKEN) {
+    if (token === AUTH_TOKEN) return 'manager';
+    return 'guest';
+  }
+  return 'manager';
+}
+
+function requireRead(req, res, next) {
+  req.role = getRole(req);
+  next();
+}
+
+function requireWrite(req, res, next) {
+  const role = getRole(req);
+  if (role === 'manager') { req.role = role; return next(); }
+  res.status(role === 'demo' ? 403 : 401).json({ error: role === 'demo' ? 'Демо-доступ: только просмотр' : 'Не авторизован' });
 }
 
 const app = express();
@@ -54,23 +70,22 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// Защита панели менеджера
-if (AUTH_TOKEN) {
-  app.use('/manager.html', (req, res, next) => {
-    const token = req.query.token || (req.headers.authorization && req.headers.authorization.startsWith('Bearer ') ? req.headers.authorization.slice(7) : null);
-    if (token === AUTH_TOKEN) return next();
-    res.sendFile(path.join(__dirname, '..', 'public', 'login.html'));
-  });
-}
-
 app.use('/api/', apiLimiter);
-app.use('/api/crm/', requireAuth);
-app.use('/api/assistant/', requireAuth);
+app.use('/api/crm/', requireRead);
+app.use('/api/assistant/', requireRead);
 app.use('/api/prices', (req, res, next) => {
   if (req.method === 'GET') return next();
-  requireAuth(req, res, next);
+  requireWrite(req, res, next);
 });
-app.use('/api/analytics/', requireAuth);
+app.use('/api/analytics/', requireRead);
+app.use('/api/leads', requireRead);
+app.use('/api/lead/', requireRead);
+app.use('/api/deal/', requireRead);
+app.use('/api/crm/lead', (req, res, next) => req.method === 'GET' ? next() : requireWrite(req, res, next));
+app.use('/api/crm/deal', (req, res, next) => req.method === 'GET' ? next() : requireWrite(req, res, next));
+app.use('/api/crm/task', (req, res, next) => req.method === 'GET' ? next() : requireWrite(req, res, next));
+app.use('/api/assistant/chat', (req, res, next) => req.method === 'GET' ? next() : requireWrite(req, res, next));
+app.use('/api/assistant/template', (req, res, next) => req.method === 'GET' ? next() : requireWrite(req, res, next));
 
 const PORT = process.env.PORT || 3000;
 const activeSessions = new Map();
@@ -125,6 +140,9 @@ app.post('/api/lead', async (req, res) => {
       upgrades: data.upgrades || '',
     });
     notify.notifyAll(lead);
+    integrations.sendToCrm(lead).then(res => {
+      if (res.sentCount === 0) console.log('CRM integration skipped:', res.results.map(r => r.reason).join('; '));
+    }).catch(err => console.error('CRM integration error:', err.message));
     const clientData = data.phone ? clientCabinet.loginByPhone(data.phone) : null;
     res.json({ ok: true, id: lead.id, client: clientData });
   } catch (err) {
@@ -304,6 +322,18 @@ app.post('/api/walls/export/xlsx', async (req, res) => {
   }
 });
 
+app.post('/api/export/pdf', async (req, res) => {
+  try {
+    const { title, items, grandTotal, upgradesTotal, discountLabel, discountSavings } = req.body;
+    const buf = await exp.generateEstimatePdf({ title, items, grandTotal, upgradesTotal, discountLabel, discountSavings });
+    res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename="smeta.pdf"', 'Content-Length': buf.length });
+    res.send(buf);
+  } catch (err) {
+    console.error('Estimate PDF export error:', err);
+    res.status(500).json({ error: 'Ошибка генерации PDF' });
+  }
+});
+
 app.post('/api/crm/lead', async (req, res) => {
   try {
     const lead = await crm.createLead(req.body);
@@ -343,7 +373,23 @@ app.post('/api/crm/task', async (req, res) => {
 
 app.get('/api/crm/deals', async (req, res) => {
   try {
-    res.json(crm.getDeals());
+    let deals = crm.getDeals();
+    const { q, status } = req.query;
+    if (status) deals = deals.filter(d => d.status === status);
+    if (q) {
+      const needle = String(q).toLowerCase().trim();
+      const leads = db.getLeads();
+      const leadsById = {};
+      leads.forEach(l => { leadsById[l.id] = l; });
+      deals = deals.filter(d => {
+        const lead = leadsById[d.leadId];
+        return String(d.id) === needle
+          || String(d.leadId) === needle
+          || (d.ceilingType || '').toLowerCase().includes(needle)
+          || (lead && ((lead.name || '').toLowerCase().includes(needle) || (lead.phone || '').toLowerCase().includes(needle)));
+      });
+    }
+    res.json(deals);
   } catch (err) {
     res.status(500).json({ error: 'Ошибка загрузки' });
   }
@@ -630,11 +676,114 @@ app.get('/api/analytics/export', async (req, res) => {
 
 app.get('/api/leads', async (req, res) => {
   try {
-    const leads = db.getLeads();
+    let leads = db.getLeads();
+    const { q, status } = req.query;
+    if (status) leads = leads.filter(l => l.status === status);
+    if (q) {
+      const needle = String(q).toLowerCase().trim();
+      leads = leads.filter(l =>
+        String(l.id) === needle
+        || (l.name || '').toLowerCase().includes(needle)
+        || (l.phone || '').toLowerCase().includes(needle)
+        || (l.email || '').toLowerCase().includes(needle)
+        || (l.source || '').toLowerCase().includes(needle)
+        || (l.ceilingType || '').toLowerCase().includes(needle)
+      );
+    }
     res.json(leads);
   } catch (err) {
     res.status(500).json({ error: 'Ошибка загрузки' });
   }
+});
+
+app.get('/api/leads/export', async (req, res) => {
+  try {
+    const format = req.query.format || 'csv';
+    const { q, status } = req.query;
+    let leads = db.getLeads();
+    if (status) leads = leads.filter(l => l.status === status);
+    if (q) {
+      const needle = String(q).toLowerCase().trim();
+      leads = leads.filter(l =>
+        String(l.id) === needle
+        || (l.name || '').toLowerCase().includes(needle)
+        || (l.phone || '').toLowerCase().includes(needle)
+        || (l.email || '').toLowerCase().includes(needle)
+        || (l.source || '').toLowerCase().includes(needle)
+        || (l.ceilingType || '').toLowerCase().includes(needle)
+      );
+    }
+    if (format === 'xlsx') {
+      const buf = await exp.exportLeadsXlsx(leads);
+      res.set({ 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Content-Disposition': 'attachment; filename=leads.xlsx', 'Content-Length': buf.length });
+      return res.send(buf);
+    }
+    res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename=leads.csv' });
+    res.send('\uFEFF' + exp.exportLeadsCsv(leads));
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка выгрузки' });
+  }
+});
+
+app.get('/api/crm/deals/export', async (req, res) => {
+  try {
+    const format = req.query.format || 'csv';
+    const deals = crm.getDeals();
+    if (format === 'xlsx') {
+      const buf = await exp.exportDealsXlsx(deals);
+      res.set({ 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Content-Disposition': 'attachment; filename=deals.xlsx', 'Content-Length': buf.length });
+      return res.send(buf);
+    }
+    res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename=deals.csv' });
+    res.send('\uFEFF' + exp.exportDealsCsv(deals));
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка выгрузки' });
+  }
+});
+
+// ─── Комментарии и история ─────────────────────────────────
+app.get('/api/lead/:id/comments', (req, res) => {
+  try {
+    const lead = db.getLeadById(parseInt(req.params.id));
+    if (!lead) return res.status(404).json({ error: 'Лид не найден' });
+    res.json({ lead, comments: db.getComments('lead', req.params.id) });
+  } catch (err) { res.status(500).json({ error: 'Ошибка загрузки' }); }
+});
+
+app.post('/api/lead/:id/comment', requireWrite, (req, res) => {
+  try {
+    const text = String(req.body.text || '').trim();
+    if (!text) return res.status(400).json({ error: 'Пустой комментарий' });
+    const lead = db.getLeadById(parseInt(req.params.id));
+    if (!lead) return res.status(404).json({ error: 'Лид не найден' });
+    const comment = db.saveComment('lead', req.params.id, req.body.author || 'менеджер', text);
+    res.json({ ok: true, comment });
+  } catch (err) { res.status(500).json({ error: 'Ошибка сохранения' }); }
+});
+
+app.get('/api/deal/:id/comments', (req, res) => {
+  try {
+    const deals = crm.getDeals();
+    const deal = deals.find(d => String(d.id) === String(req.params.id));
+    if (!deal) return res.status(404).json({ error: 'Сделка не найдена' });
+    const lead = deal.leadId ? db.getLeadById(deal.leadId) : null;
+    res.json({ deal, lead, comments: db.getComments('deal', req.params.id) });
+  } catch (err) { res.status(500).json({ error: 'Ошибка загрузки' }); }
+});
+
+app.post('/api/deal/:id/comment', requireWrite, (req, res) => {
+  try {
+    const text = String(req.body.text || '').trim();
+    if (!text) return res.status(400).json({ error: 'Пустой комментарий' });
+    const deals = crm.getDeals();
+    if (!deals.find(d => String(d.id) === String(req.params.id))) return res.status(404).json({ error: 'Сделка не найдена' });
+    const comment = db.saveComment('deal', req.params.id, req.body.author || 'менеджер', text);
+    res.json({ ok: true, comment });
+  } catch (err) { res.status(500).json({ error: 'Ошибка сохранения' }); }
+});
+
+app.get('/api/auth/role', (req, res) => {
+  res.json({ role: getRole(req) });
 });
 
 app.post('/api/client/code', (req, res) => {
@@ -681,7 +830,12 @@ app.get('/api/health', (req, res) => {
     model: ai.getModel(),
     lowBalance: ai.getLowBalance ? ai.getLowBalance() : false,
     features: ['chat', 'calculator', 'crm', 'assistant', 'analytics'],
+    integrations: integrations.status(),
   });
+});
+
+app.get('/api/integrations/status', (req, res) => {
+  res.json({ ok: true, ...integrations.status() });
 });
 
 if (require.main === module) {

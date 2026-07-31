@@ -3,6 +3,18 @@
     localStorage.setItem('auth_token', 'demo');
   }
   const authToken = localStorage.getItem('auth_token');
+  let role = 'guest';
+
+  function renderRoleBadges() {
+    const labels = { manager: 'Менеджер', demo: 'Демо-режим (только чтение)', guest: 'Гостевой просмотр' };
+    const cls = { manager: 'manager', demo: 'demo', guest: 'guest' };
+    ['roleBadgeLeads', 'roleBadgeDeals'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = labels[role] || '';
+      if (el) el.className = 'role-badge ' + (cls[role] || 'guest');
+    });
+  }
+
   async function apiFetch(url, options) {
     const headers = { ...(options?.headers || {}) };
     if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
@@ -10,6 +22,27 @@
     if (res.status === 401) { localStorage.removeItem('auth_token'); window.location.href = '/login.html'; return; }
     return res;
   }
+
+  function canWrite() { return role === 'manager'; }
+
+  fetch('/api/auth/role')
+    .then(r => r.json())
+    .then(data => {
+      role = data.role || 'guest';
+      renderRoleBadges();
+      loadDashboard();
+      loadLeads();
+      loadDeals();
+      loadPrices();
+    })
+    .catch(() => {
+      role = 'guest';
+      renderRoleBadges();
+      loadDashboard();
+      loadLeads();
+      loadDeals();
+      loadPrices();
+    });
   // Navigation
   document.querySelectorAll('.mgr-sidebar a').forEach(link => {
     link.addEventListener('click', (e) => {
@@ -41,50 +74,114 @@
       ).join('') || '<tr><td colspan="2">Нет данных</td></tr>';
 
       const sourceBody = document.getElementById('sourceStatsBody');
-      sourceBody.innerHTML = Object.entries(data.leads.bySource).map(([source, count]) =>
-        `<tr><td>${source}</td><td>${count}</td></tr>`
-      ).join('');
+      const srcConv = data.conversion?.bySource || {};
+      const srcNames = { calculator: 'Калькулятор', website: 'Сайт', chat: 'Чат', widget: 'Виджет', landing: 'Лендинг', crm: 'CRM', unknown: 'Неизвестно' };
+      sourceBody.innerHTML = Object.entries(data.leads.bySource).map(([source, count]) => {
+        const c = srcConv[source] || { deals: 0, won: 0, rate: 0 };
+        const rateColor = c.rate >= 50 ? 'var(--accent-success)' : c.rate >= 25 ? 'var(--accent-warning)' : 'var(--text-secondary)';
+        return `<tr><td>${srcNames[source] || source}</td><td>${count}</td><td>${c.deals}</td><td>${c.won}</td><td style="font-weight:600;color:${rateColor}">${c.rate}%</td></tr>`;
+      }).join('') || '<tr><td colspan="5">Нет данных</td></tr>';
+
+      renderTrendChart(data.trend);
     } catch (e) {
       console.error('Dashboard load error:', e);
     }
   }
 
+  function renderTrendChart(trend) {
+    const svg = document.getElementById('trendChart');
+    if (!svg) return;
+    const leads = trend?.leads30 || [];
+    const deals = trend?.deals30 || [];
+    if (!leads.length) return;
+
+    const W = 600, H = 180, padL = 8, padR = 8, padT = 10, padB = 22;
+    const innerW = W - padL - padR, innerH = H - padT - padB;
+    const maxVal = Math.max(1, ...leads.map(p => p.count), ...deals.map(p => p.count));
+    const step = innerW / (leads.length - 1 || 1);
+
+    const x = (i) => padL + i * step;
+    const y = (v) => padT + innerH - (v / maxVal) * innerH;
+
+    const leadsPath = leads.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.count).toFixed(1)}`).join(' ');
+    const dealsPath = deals.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.count).toFixed(1)}`).join(' ');
+
+    const leadsArea = `${leadsPath} L${x(leads.length - 1).toFixed(1)},${(padT + innerH).toFixed(1)} L${x(0).toFixed(1)},${(padT + innerH).toFixed(1)} Z`;
+
+    let html = `
+      <defs>
+        <linearGradient id="trendLeadFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#2563EB" stop-opacity="0.22"/>
+          <stop offset="100%" stop-color="#2563EB" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      ${[0, 0.5, 1].map(f => {
+        const gy = padT + innerH * f;
+        return `<line x1="${padL}" y1="${gy}" x2="${W - padR}" y2="${gy}" stroke="#E2E8F0" stroke-width="1"/>`;
+      }).join('')}
+      <path d="${leadsArea}" fill="url(#trendLeadFill)"/>
+      <path d="${leadsPath}" fill="none" stroke="#2563EB" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <path d="${dealsPath}" fill="none" stroke="#22C55E" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    `;
+    const every = Math.ceil(leads.length / 10);
+    leads.forEach((p, i) => {
+      if (i % every !== 0 && i !== leads.length - 1) return;
+      html += `<text x="${x(i).toFixed(1)}" y="${H - 6}" font-size="9" fill="#94A3B8" text-anchor="middle">${p.date.slice(5)}</text>`;
+    });
+    svg.innerHTML = html;
+  }
+
   // Load leads
+  let currentLeadFilters = { q: '', status: '' };
   async function loadLeads() {
     try {
-      const res = await apiFetch('/api/leads');
+      const params = new URLSearchParams();
+      if (currentLeadFilters.q) params.set('q', currentLeadFilters.q);
+      if (currentLeadFilters.status) params.set('status', currentLeadFilters.status);
+      const res = await apiFetch('/api/leads?' + params.toString());
+      if (!res) return;
       const leads = await res.json();
       const body = document.getElementById('leadsBody');
-      body.innerHTML = leads.slice(0, 50).map(l => {
+      body.innerHTML = leads.slice(0, 200).map(l => {
         const statusBadge = `badge-${l.status === 'new' ? 'new' : l.status === 'deal' ? 'deal' : l.status === 'won' ? 'won' : l.status === 'lost' ? 'lost' : 'new'}`;
         const statusLabel = l.status === 'new' ? 'Новый' : l.status === 'deal' ? 'В работе' : l.status === 'won' ? 'Выигран' : l.status === 'lost' ? 'Потерян' : l.status;
-        return `<tr><td>${l.id}</td><td>${l.name || '—'}</td><td>${l.phone || '—'}</td><td>${l.source || '—'}</td><td>${l.ceilingType || '—'}</td><td><span class="badge ${statusBadge}">${statusLabel}</span></td><td>${l.created_at ? new Date(l.created_at).toLocaleDateString('ru-RU') : '—'}</td></tr>`;
-      }).join('') || '<tr><td colspan="7">Нет лидов</td></tr>';
+        const writeBtn = canWrite()
+          ? `<button onclick="viewLead(${l.id})">Открыть</button><button onclick="convertLeadToDeal(${l.id})">В сделку</button>`
+          : `<button onclick="viewLead(${l.id})">Открыть</button>`;
+        return `<tr><td>${l.id}</td><td>${l.name || '—'}</td><td>${l.phone || '—'}</td><td>${l.source || '—'}</td><td>${l.ceilingType || '—'}</td><td><span class="badge ${statusBadge}">${statusLabel}</span></td><td>${l.created_at ? new Date(l.created_at).toLocaleDateString('ru-RU') : '—'}</td><td><div class="row-actions">${writeBtn}</div></td></tr>`;
+      }).join('') || '<tr><td colspan="8">Нет лидов</td></tr>';
     } catch (e) {
       console.error('Leads load error:', e);
     }
   }
 
   // Load deals
+  let currentDealFilters = { q: '', status: '' };
   async function loadDeals() {
     try {
-      const res = await apiFetch('/api/crm/deals');
+      const params = new URLSearchParams();
+      if (currentDealFilters.q) params.set('q', currentDealFilters.q);
+      if (currentDealFilters.status) params.set('status', currentDealFilters.status);
+      const res = await apiFetch('/api/crm/deals?' + params.toString());
+      if (!res) return;
       const deals = await res.json();
       const body = document.getElementById('dealsBody');
-      body.innerHTML = deals.slice(0, 50).map(d => {
+      body.innerHTML = deals.slice(0, 200).map(d => {
         const stageLabel = d.status === 'negotiation' ? 'Переговоры' : d.status === 'measurement_scheduled' ? 'Замер назначен' : d.status === 'measurement_done' ? 'Замер выполнен' : d.status === 'won' ? 'Выиграна' : d.status === 'lost' ? 'Потеряна' : d.status;
         const badgeClass = d.status === 'won' ? 'badge-won' : d.status === 'lost' ? 'badge-lost' : d.status === 'measurement_scheduled' ? 'badge-measure' : 'badge-deal';
-        return `<tr><td>${d.id}</td><td>#${d.leadId || '—'}</td><td>${d.ceilingType || '—'}</td><td>${d.estimatedPrice ? d.estimatedPrice.toLocaleString() + ' ₽' : '—'}</td><td><span class="badge ${badgeClass}">${stageLabel}</span></td><td class="deal-actions">
-          <select onchange="updateDealStatus(${d.id}, this.value)">
+        const statusSelect = canWrite()
+          ? `<select onchange="updateDealStatus(${d.id}, this.value)">
             <option value="negotiation" ${d.status === 'negotiation' ? 'selected' : ''}>Переговоры</option>
             <option value="measurement_scheduled" ${d.status === 'measurement_scheduled' ? 'selected' : ''}>Замер назначен</option>
             <option value="measurement_done" ${d.status === 'measurement_done' ? 'selected' : ''}>Замер выполнен</option>
             <option value="won" ${d.status === 'won' ? 'selected' : ''}>Выиграна</option>
             <option value="lost" ${d.status === 'lost' ? 'selected' : ''}>Потеряна</option>
-          </select>
-        </td><td>${d.created_at ? new Date(d.created_at).toLocaleDateString('ru-RU') : '—'}</td></tr>`;
+          </select>`
+          : `<span class="badge ${badgeClass}">${stageLabel}</span>`;
+        return `<tr><td>${d.id}</td><td>#${d.leadId || '—'}</td><td>${d.ceilingType || '—'}</td><td>${d.estimatedPrice ? d.estimatedPrice.toLocaleString() + ' ₽' : '—'}</td><td>${statusSelect}</td><td class="deal-actions"><button onclick="viewDeal(${d.id})">Открыть</button></td><td>${d.created_at ? new Date(d.created_at).toLocaleDateString('ru-RU') : '—'}</td></tr>`;
       }).join('') || '<tr><td colspan="7">Нет сделок</td></tr>';
       window.updateDealStatus = async (id, status) => {
+        if (!canWrite()) { alert('Демо-доступ: изменение недоступно'); return; }
         await apiFetch(`/api/crm/deal/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
         loadDeals();
         loadDashboard();
@@ -93,6 +190,29 @@
       console.error('Deals load error:', e);
     }
   }
+
+  // ─── Фильтры и поиск ─────────────────────────────────────
+  const leadSearchEl = document.getElementById('leadSearch');
+  const leadStatusEl = document.getElementById('leadStatusFilter');
+  const dealSearchEl = document.getElementById('dealSearch');
+  const dealStatusEl = document.getElementById('dealStatusFilter');
+
+  let searchTimer = null;
+  function onSearchChange(getValue, setFilters, reload) {
+    return () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        const f = setFilters();
+        f.q = getValue().trim();
+        reload();
+      }, 300);
+    };
+  }
+
+  if (leadSearchEl) leadSearchEl.addEventListener('input', onSearchChange(() => leadSearchEl.value, () => currentLeadFilters, loadLeads));
+  if (leadStatusEl) leadStatusEl.addEventListener('change', () => { currentLeadFilters.status = leadStatusEl.value; loadLeads(); });
+  if (dealSearchEl) dealSearchEl.addEventListener('input', onSearchChange(() => dealSearchEl.value, () => currentDealFilters, loadDeals));
+  if (dealStatusEl) dealStatusEl.addEventListener('change', () => { currentDealFilters.status = dealStatusEl.value; loadDeals(); });
 
   // Advanced calculator
   const widthInput = document.getElementById('advWidth');
@@ -438,11 +558,183 @@
     }
   }
 
-  // Initial load
-  loadDashboard();
-  loadLeads();
-  loadDeals();
-  loadPrices();
+  // ─── Модалка деталей ─────────────────────────────────────
+  const overlay = document.getElementById('modalOverlay');
+  const modalBody = document.getElementById('modalBody');
+  const modalTitle = document.getElementById('modalTitle');
+
+  function openModal(title) {
+    modalTitle.textContent = title;
+    overlay.classList.add('open');
+  }
+  function closeModal() { overlay.classList.remove('open'); }
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+
+  function esc(v) { return String(v == null ? '' : v).replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  function renderComments(container, comments) {
+    if (!comments || !comments.length) {
+      container.innerHTML = '<p style="font-size:0.8rem;color:var(--text-secondary);">История пуста</p>';
+      return;
+    }
+    container.innerHTML = comments.map(c => `
+      <div class="comment-item">
+        <div class="c-meta">${esc(c.author)} · ${new Date(c.created_at).toLocaleString('ru-RU')}</div>
+        <div class="c-text">${esc(c.text)}</div>
+      </div>
+    `).join('');
+  }
+
+  function commentFormHtml(entityType, id) {
+    return `<div class="comment-form">
+      <input type="text" id="commentInput-${id}" placeholder="Добавить комментарий..." maxlength="500">
+      <button onclick="addComment(${id}, '${entityType}')">Добавить</button>
+    </div>`;
+  }
+
+  window.addComment = async (id, entityType) => {
+    if (!canWrite()) { alert('Демо-доступ: добавление комментариев недоступно'); return; }
+    const input = document.getElementById('commentInput-' + id);
+    const text = input.value.trim();
+    if (!text) return;
+    const res = await apiFetch(`/api/${entityType}/${id}/comment`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, author: 'менеджер' })
+    });
+    if (res && res.ok) {
+      input.value = '';
+      if (entityType === 'lead') viewLead(id); else viewDeal(id);
+    } else {
+      alert('Ошибка сохранения комментария');
+    }
+  };
+
+  // Просмотр лида
+  window.viewLead = async (id) => {
+    const res = await apiFetch('/api/lead/' + id + '/comments');
+    if (!res) return;
+    const data = await res.json();
+    const l = data.lead;
+    openModal('Лид #' + id);
+    const statusLabels = { new: 'Новый', deal: 'В работе', won: 'Выигран', lost: 'Потерян' };
+    modalBody.innerHTML = `
+      <div class="modal-section">
+        <div class="info-grid">
+          <div class="field"><span class="k">Имя</span><span class="v">${esc(l.name || '—')}</span></div>
+          <div class="field"><span class="k">Телефон</span><span class="v">${esc(l.phone || '—')}</span></div>
+          <div class="field"><span class="k">Источник</span><span class="v">${esc(l.source || '—')}</span></div>
+          <div class="field"><span class="k">Продукт</span><span class="v">${esc(l.productType || '—')}</span></div>
+          <div class="field"><span class="k">Тип потолка</span><span class="v">${esc(l.ceilingType || '—')}</span></div>
+          <div class="field"><span class="k">Площадь</span><span class="v">${l.area ? l.area + ' м²' : '—'}</span></div>
+          <div class="field"><span class="k">Стены</span><span class="v">${l.hasWalls ? (l.wallSystem || 'СИС') + (l.wallArea ? ', ' + l.wallArea + ' м²' : '') : 'нет'}</span></div>
+          <div class="field"><span class="k">Светильники</span><span class="v">${l.hasLights ? 'да' : '—'}</span></div>
+          <div class="field"><span class="k">Статус</span><span class="v">${statusLabels[l.status] || l.status}</span></div>
+          <div class="field"><span class="k">Дата</span><span class="v">${l.created_at ? new Date(l.created_at).toLocaleString('ru-RU') : '—'}</span></div>
+        </div>
+        ${l.notes ? `<div style="margin-top:0.75rem;font-size:0.85rem;color:var(--text-secondary);"><b>Комментарий клиента:</b> ${esc(l.notes)}</div>` : ''}
+        ${canWrite() ? `<button class="btn btn-primary" style="margin-top:1rem;font-size:0.8125rem;" onclick="convertLeadToDeal(${id})">Создать сделку</button>` : ''}
+      </div>
+      <div class="modal-section">
+        <h4>История и комментарии</h4>
+        <div id="commentsContainer"></div>
+        ${canWrite() ? commentFormHtml('lead', id) : ''}
+      </div>
+    `;
+    renderComments(document.getElementById('commentsContainer'), data.comments);
+  };
+
+  // Просмотр сделки
+  window.viewDeal = async (id) => {
+    const res = await apiFetch('/api/deal/' + id + '/comments');
+    if (!res) return;
+    const data = await res.json();
+    const d = data.deal;
+    const lead = data.lead;
+    openModal('Сделка #' + id);
+    const stageLabels = { negotiation: 'Переговоры', measurement_scheduled: 'Замер назначен', measurement_done: 'Замер выполнен', won: 'Выиграна', lost: 'Потеряна' };
+    modalBody.innerHTML = `
+      <div class="modal-section">
+        <div class="info-grid">
+          <div class="field"><span class="k">Лид</span><span class="v">#${d.leadId ?? '—'}${lead ? ' · ' + esc(lead.name || '') : ''}</span></div>
+          <div class="field"><span class="k">Телефон</span><span class="v">${esc(lead?.phone || '—')}</span></div>
+          <div class="field"><span class="k">Тип потолка</span><span class="v">${esc(d.ceilingType || '—')}</span></div>
+          <div class="field"><span class="k">Сумма</span><span class="v">${d.estimatedPrice ? d.estimatedPrice.toLocaleString() + ' ₽' : '—'}</span></div>
+          <div class="field"><span class="k">Статус</span><span class="v">${stageLabels[d.status] || d.status}</span></div>
+          <div class="field"><span class="k">Дата</span><span class="v">${d.created_at ? new Date(d.created_at).toLocaleString('ru-RU') : '—'}</span></div>
+        </div>
+        ${canWrite() ? `
+        <div style="margin-top:1rem;display:flex;gap:0.5rem;align-items:center;">
+          <select id="modalDealStatus" style="padding:0.4rem 0.6rem;border:1px solid var(--border-medium);border-radius:6px;font-size:0.8125rem;">
+            ${Object.entries(stageLabels).map(([k, v]) => `<option value="${k}" ${d.status === k ? 'selected' : ''}>${v}</option>`).join('')}
+          </select>
+          <button class="btn btn-primary" style="font-size:0.8125rem;" onclick="changeDealStatusModal(${id})">Сохранить</button>
+        </div>` : ''}
+      </div>
+      <div class="modal-section">
+        <h4>История и комментарии</h4>
+        <div id="commentsContainer"></div>
+        ${canWrite() ? commentFormHtml('deal', id) : ''}
+      </div>
+    `;
+    renderComments(document.getElementById('commentsContainer'), data.comments);
+  };
+
+  window.changeDealStatusModal = async (id) => {
+    const status = document.getElementById('modalDealStatus').value;
+    await apiFetch(`/api/crm/deal/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+    viewDeal(id);
+    loadDeals();
+    loadDashboard();
+  };
+
+  // Быстрый переход лид → сделка
+  window.convertLeadToDeal = async (leadId) => {
+    if (!canWrite()) { alert('Демо-доступ: создание сделок недоступно'); return; }
+    if (!confirm('Создать сделку из этого лида?')) return;
+    const res = await apiFetch('/api/crm/deal', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ leadId, ceilingType: '' })
+    });
+    if (res && res.ok) {
+      alert('Сделка создана!');
+      closeModal();
+      loadLeads();
+      loadDeals();
+      loadDashboard();
+    } else {
+      alert('Ошибка создания сделки');
+    }
+  };
+
+  // Экспорт
+  window.exportLeads = (format) => {
+    const params = new URLSearchParams();
+    if (currentLeadFilters.q) params.set('q', currentLeadFilters.q);
+    if (currentLeadFilters.status) params.set('status', currentLeadFilters.status);
+    params.set('format', format);
+    if (authToken) params.set('token', authToken);
+    const url = '/api/leads/export?' + params.toString();
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'leads.' + (format === 'xlsx' ? 'xlsx' : 'csv');
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  window.exportDeals = (format) => {
+    const params = new URLSearchParams();
+    params.set('format', format);
+    if (authToken) params.set('token', authToken);
+    const url = '/api/crm/deals/export?' + params.toString();
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'deals.' + (format === 'xlsx' ? 'xlsx' : 'csv');
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
 
   // Refresh data when switching sections
   document.querySelectorAll('.mgr-sidebar a').forEach(link => {

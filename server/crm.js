@@ -38,6 +38,9 @@ async function createDeal(leadId, dealData) {
 
   const deal = db.saveDeal({ leadId, ...dealData, status: 'negotiation' });
 
+  db.saveComment('deal', deal.id, 'system', 'Сделка создана из лида #' + leadId);
+  db.saveComment('lead', leadId, 'system', 'Создана сделка #' + deal.id + ' (' + (dealData.ceilingType || 'потолок') + ')');
+
   if (crmAdapter.active) {
     try {
       if (crmAdapter.name === 'bitrix24') await pushDealToBitrix24(lead, dealData);
@@ -69,9 +72,14 @@ async function createTask(taskData) {
 async function updateDealStatus(dealId, status) {
   const deal = db.updateDeal(dealId, { status });
   if (deal) {
+    const labels = {
+      negotiation: 'Переговоры', measurement_scheduled: 'Замер назначен',
+      measurement_done: 'Замер выполнен', won: 'Выиграна', lost: 'Потеряна',
+    };
+    db.saveComment('deal', dealId, 'system', 'Статус изменён: ' + (labels[status] || status));
     db.trackEvent('deal_status_changed', { dealId, status });
     if (status === 'measurement_scheduled') {
-      db.createReminderTask(deal);
+      createReminderTask(deal);
     }
     if (status === 'won' || status === 'lost') {
       db.updateLead(deal.leadId, { status: status === 'won' ? 'won' : 'lost' });
