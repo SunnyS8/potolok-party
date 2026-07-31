@@ -44,9 +44,11 @@ function requireAuth(req, res, next) {
 
 const app = express();
 
-app.get(['/drawing', '/drawing/'], (req, res) => res.redirect(301, '/calculator.html'));
-app.get('/drawing/*', (req, res) => res.redirect(301, '/calculator.html'));
-app.get(['/calculator', '/calculator/'], (req, res) => res.redirect(301, '/calculator.html'));
+app.get(['/drawing', '/drawing/'], (req, res) => res.redirect(301, '/calculator/'));
+app.get('/drawing/*', (req, res) => res.redirect(301, '/calculator/'));
+app.get('/calculator.html', (req, res) => res.redirect(301, '/calculator/'));
+
+app.use('/calculator', express.static(path.join(__dirname, '..', 'public', 'calculator')));
 
 app.use(cors());
 app.use(express.json());
@@ -64,7 +66,10 @@ if (AUTH_TOKEN) {
 app.use('/api/', apiLimiter);
 app.use('/api/crm/', requireAuth);
 app.use('/api/assistant/', requireAuth);
-app.use('/api/prices', requireAuth);
+app.use('/api/prices', (req, res, next) => {
+  if (req.method === 'GET') return next();
+  requireAuth(req, res, next);
+});
 app.use('/api/analytics/', requireAuth);
 
 const PORT = process.env.PORT || 3000;

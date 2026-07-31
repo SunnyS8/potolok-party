@@ -5,14 +5,15 @@
     { "src": "public/**/*", "use": "@vercel/static" }
   ],
   "redirects": [
-    { "source": "/drawing", "destination": "/calculator.html", "permanent": true },
-    { "source": "/drawing/(.*)", "destination": "/calculator.html", "permanent": true },
-    { "source": "/calculator", "destination": "/calculator.html", "permanent": true },
-    { "source": "/calculator/(.*)", "destination": "/calculator.html", "permanent": true }
+    { "source": "/drawing", "destination": "/calculator/", "permanent": true },
+    { "source": "/drawing/(.*)", "destination": "/calculator/", "permanent": true },
+    { "source": "/calculator.html", "destination": "/calculator/", "permanent": true }
   ],
   "routes": [
     { "src": "^/api/(.*)$", "dest": "/server/index.js" },
-    { "src": "^/$", "dest": "/public/index.html" },
+    { "src": "^/calculator/?$", "dest": "/public/calculator/index.html" },
+    { "src": "^/calculator/(.*)$", "dest": "/public/calculator/$1" },
+    { "src": "^/$", "dest": "/index.html" },
     { "src": "^/(.*)$", "dest": "/public/$1" }
   ]
 }
