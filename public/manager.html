@@ -32,7 +32,7 @@
     .table-wrap tr:last-child td { border-bottom: none; }
 
     .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 500; }
-    .badge-new { background: #EFF6FF; color: var(--accent-primary); }
+    .badge-new { background: var(--accent-primary-light); color: var(--accent-primary); }
     .badge-deal { background: #F0FDF4; color: var(--accent-success); }
     .badge-measure { background: #FFFBEB; color: var(--accent-warning); }
     .badge-won { background: #F0FDF4; color: var(--accent-success); }
@@ -51,9 +51,9 @@
     .assistant-msgs .msg.bot { align-self: flex-start; background: var(--bg-base); border: 1px solid var(--border-light); color: var(--text-primary); border-radius: 8px; }
     .assistant-input { display: flex; gap: 0.5rem; padding: 0.75rem; border-top: 1px solid var(--border-light); }
     .assistant-input input { flex: 1; padding: 0.5rem 0.75rem; border: 1px solid var(--border-medium); border-radius: 6px; font-size: 0.8125rem; outline: none; }
-    .assistant-input input:focus { border-color: var(--accent-primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    .assistant-input input:focus { border-color: var(--accent-primary); box-shadow: 0 0 0 3px rgba(91,138,140,0.1); }
     .assistant-input button { padding: 0.5rem 1rem; background: var(--accent-primary); color: #fff; border: none; border-radius: 6px; font-size: 0.8125rem; cursor: pointer; font-weight: 500; }
-    .assistant-input button:hover { background: var(--hover-primary); }
+    .assistant-input button:hover { background: var(--accent-primary-hover); }
     .template-btns { display: flex; gap: 0.4rem; padding: 0.5rem 0.75rem; border-top: 1px solid var(--border-light); flex-wrap: wrap; }
     .template-btn { padding: 0.25rem 0.6rem; border: 1px solid var(--border-light); background: var(--surface-card); border-radius: 4px; font-size: 0.7rem; cursor: pointer; color: var(--accent-primary); }
 
@@ -64,12 +64,12 @@
     .toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 1rem; }
     .toolbar input[type="search"], .toolbar select { padding: 0.4rem 0.6rem; border: 1px solid var(--border-medium); border-radius: 6px; font-size: 0.8125rem; outline: none; background: var(--surface-card); color: var(--text-primary); font-family: var(--font-sans); }
     .toolbar input[type="search"] { min-width: 220px; flex: 1; }
-    .toolbar input:focus, .toolbar select:focus { border-color: var(--accent-primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    .toolbar input:focus, .toolbar select:focus { border-color: var(--accent-primary); box-shadow: 0 0 0 3px rgba(91,138,140,0.1); }
     .toolbar .spacer { flex: 1; }
 
     .row-actions { display: flex; gap: 0.3rem; }
     .row-actions button { padding: 0.25rem 0.5rem; border: 1px solid var(--border-light); border-radius: 4px; font-size: 0.7rem; cursor: pointer; background: var(--surface-card); color: var(--accent-primary); }
-    .row-actions button:hover { border-color: var(--accent-primary); background: #EFF6FF; }
+    .row-actions button:hover { border-color: var(--accent-primary); background: var(--accent-primary-light); }
     .row-actions button.btn-danger { color: var(--accent-error); }
     .row-actions button.btn-danger:hover { border-color: var(--accent-error); background: #FEF2F2; }
 

@@ -111,8 +111,8 @@
     let html = `
       <defs>
         <linearGradient id="trendLeadFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#2563EB" stop-opacity="0.22"/>
-          <stop offset="100%" stop-color="#2563EB" stop-opacity="0"/>
+          <stop offset="0%" stop-color="#5B8A8C" stop-opacity="0.22"/>
+          <stop offset="100%" stop-color="#5B8A8C" stop-opacity="0"/>
         </linearGradient>
       </defs>
       ${[0, 0.5, 1].map(f => {
@@ -120,7 +120,7 @@
         return `<line x1="${padL}" y1="${gy}" x2="${W - padR}" y2="${gy}" stroke="#E2E8F0" stroke-width="1"/>`;
       }).join('')}
       <path d="${leadsArea}" fill="url(#trendLeadFill)"/>
-      <path d="${leadsPath}" fill="none" stroke="#2563EB" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <path d="${leadsPath}" fill="none" stroke="#5B8A8C" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
       <path d="${dealsPath}" fill="none" stroke="#22C55E" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
     `;
     const every = Math.ceil(leads.length / 10);

@@ -8,10 +8,10 @@
   --surface-soft: #F7F6F3;
   --border-light: #EAE8E3;
   --border-medium: #D6D3CD;
-  --accent-primary: #2563EB;
-  --accent-primary-hover: #1D4ED8;
-  --accent-primary-light: #DBEAFE;
-  --accent-primary-subtle: rgba(37,99,235,0.06);
+  --accent-primary: #5B8A8C;
+  --accent-primary-hover: #4D7A7C;
+  --accent-primary-light: #E8F0EE;
+  --accent-primary-subtle: rgba(91,138,140,0.06);
   --accent-warm: #C48B6F;
   --accent-warm-light: #F5EDE6;
   --accent-success: #7DAB7D;
@@ -127,7 +127,7 @@ nav a:hover::after { transform: scaleX(1); }
   right: -10%;
   width: 500px;
   height: 500px;
-  background: radial-gradient(circle, rgba(37,99,235,0.04) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(91,138,140,0.04) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -138,7 +138,7 @@ nav a:hover::after { transform: scaleX(1); }
   left: -10%;
   width: 500px;
   height: 500px;
-  background: radial-gradient(circle, rgba(37,99,235,0.03) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(91,138,140,0.03) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -190,7 +190,7 @@ nav a:hover::after { transform: scaleX(1); }
 }
 .btn-primary:hover {
   background: var(--accent-primary-hover);
-  box-shadow: 0 4px 12px rgba(37,99,235,0.2);
+  box-shadow: 0 4px 12px rgba(91,138,140,0.2);
 }
 .btn-secondary {
   background: var(--surface-card);
@@ -236,7 +236,7 @@ nav a:hover::after { transform: scaleX(1); }
 }
 .product-card.featured .btn-card:hover {
   background: var(--accent-primary-hover);
-  box-shadow: 0 4px 12px rgba(37,99,235,0.25);
+  box-shadow: 0 4px 12px rgba(91,138,140,0.25);
 }
 
 .products-grid {
@@ -588,7 +588,7 @@ footer {
 .form-group input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+  box-shadow: 0 0 0 3px rgba(91,138,140,0.1);
 }
 .form-group select {
   appearance: none;

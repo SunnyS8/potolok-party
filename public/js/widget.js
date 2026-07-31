@@ -4,9 +4,9 @@
 
   const styles = document.createElement('style');
   styles.textContent = `
-:root { --bg-base: #F5F5F7; --text-primary: #1F2933; --text-secondary: #6B7280; --surface-card: #FFFFFF; --border-light: #E5E7EB; --border-medium: #CBD2D9; --accent-primary: #2563EB; --accent-success: #16A34A; --accent-error: #DC2626; --accent-warning: #F59E0B; --hover-primary: #1D4ED8; --disabled-bg: #E5E7EB; --disabled-text: #9CA3AF; }
-.chat-toggle { position:fixed; bottom:24px; right:24px; width:52px; height:52px; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; border-radius:8px; font-size:22px; z-index:9999; transition:all 0.2s; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(37,99,235,0.25); }
-.chat-toggle:hover { background:var(--hover-primary); box-shadow:0 6px 16px rgba(37,99,235,0.35); }
+:root { --bg-base: #F5F5F7; --text-primary: #1F2933; --text-secondary: #6B7280; --surface-card: #FFFFFF; --border-light: #E5E7EB; --border-medium: #CBD2D9; --accent-primary: #5B8A8C; --accent-success: #16A34A; --accent-error: #DC2626; --accent-warning: #F59E0B; --hover-primary: #4D7A7C; --disabled-bg: #E5E7EB; --disabled-text: #9CA3AF; }
+.chat-toggle { position:fixed; bottom:24px; right:24px; width:52px; height:52px; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; border-radius:8px; font-size:22px; z-index:9999; transition:all 0.2s; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(91,138,140,0.25); }
+.chat-toggle:hover { background:var(--hover-primary); box-shadow:0 6px 16px rgba(91,138,140,0.35); }
 .chat-toggle .badge { position:absolute; top:-4px; right:-4px; width:18px; height:18px; background:var(--accent-error); border-radius:9px; font-size:10px; display:flex; align-items:center; justify-content:center; display:none; color:#fff; font-weight:600; font-family:'Inter',sans-serif; }
 
 .chat-panel { position:fixed; bottom:88px; right:24px; width:380px; height:540px; background:var(--surface-card); border:1px solid var(--border-light); border-radius:10px; display:none; flex-direction:column; z-index:9998; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.08); animation:slideUp 0.2s ease; }
@@ -29,7 +29,7 @@
 
 .chat-input-area { padding:0.75rem 1rem; border-top:1px solid var(--border-light); display:flex; gap:0.5rem; background:var(--surface-card); }
 .chat-input { flex:1; padding:0.6rem 0.75rem; border:1px solid var(--border-medium); border-radius:6px; font-size:0.875rem; outline:none; background:var(--surface-card); color:var(--text-primary); font-family:'Inter',sans-serif; }
-.chat-input:focus { border-color:var(--accent-primary); box-shadow:0 0 0 3px rgba(37,99,235,0.1); }
+.chat-input:focus { border-color:var(--accent-primary); box-shadow:0 0 0 3px rgba(91,138,140,0.1); }
 .chat-input::placeholder { color:var(--text-secondary); }
 .chat-send { width:36px; height:36px; background:var(--accent-primary); color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:0.9rem; display:flex; align-items:center; justify-content:center; transition:all 0.2s; flex-shrink:0; }
 .chat-send:hover { background:var(--hover-primary); }
@@ -37,7 +37,7 @@
 
 .chat-actions { padding:0.5rem 1rem; border-top:1px solid var(--border-light); display:flex; gap:0.4rem; flex-wrap:wrap; background:var(--surface-card); }
 .chat-action-btn { padding:0.35rem 0.75rem; border:1px solid var(--border-light); background:var(--surface-card); color:var(--accent-primary); border-radius:6px; font-size:0.75rem; cursor:pointer; transition:all 0.2s; white-space:nowrap; font-weight:500; }
-.chat-action-btn:hover { border-color:var(--accent-primary); background:#EFF6FF; }
+.chat-action-btn:hover { border-color:var(--accent-primary); background:#E8F0EE; }
 
 .typing { display:flex; gap:3px; padding:0.65rem 0.9rem; align-items:center; background:var(--bg-base); border-radius:8px; border:1px solid var(--border-light); }
 .typing span { width:6px; height:6px; background:var(--accent-primary); border-radius:3px; animation:bounce 1.2s infinite; }

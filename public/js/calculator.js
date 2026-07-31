@@ -264,7 +264,7 @@ async function calcCombined() {
 
   let html = '';
   if (data.combined.bundleDiscount > 0) {
-    html += '<div style="background:linear-gradient(135deg,rgba(52,211,153,0.1),rgba(37,99,235,0.1));border:1px solid rgba(52,211,153,0.25);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center">';
+    html += '<div style="background:linear-gradient(135deg,rgba(52,211,153,0.1),rgba(91,138,140,0.1));border:1px solid rgba(52,211,153,0.25);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center">';
     html += '<div style="font-size:13px;color:#6B7280">Итого со скидкой за комплекс</div>';
     html += '<div style="font-size:36px;font-weight:800;color:#34D399;margin:4px 0">' + fmt(data.combined.finalTotal) + ' ₽</div>';
     html += '<div style="font-size:13px;color:#6B7280">Скидка ' + data.combined.discountPercent + '% — экономия <strong style="color:#34D399">' + fmt(data.combined.bundleDiscount) + ' ₽</strong></div>';
@@ -290,7 +290,7 @@ async function calcCombined() {
   html += '</div>';
 
   if (data.messages && data.messages.upsell) {
-    html += '<div style="margin-top:12px;padding:12px;background:#EFF6FF;border-radius:10px;font-size:13px;color:#1D4ED8;text-align:center">💡 ' + data.messages.upsell + '</div>';
+    html += '<div style="margin-top:12px;padding:12px;background:#E8F0EE;border-radius:10px;font-size:13px;color:#4D7A7C;text-align:center">💡 ' + data.messages.upsell + '</div>';
   }
 
   document.getElementById('result').innerHTML = html;
@@ -313,7 +313,7 @@ function showUpgrades(baseAmount) {
       '<div class="upgrade-content" style="flex:1">' +
       '<div class="upgrade-label" style="font-weight:600;font-size:14px">' + u.label + '</div>' +
       '<div style="font-size:12px;color:#6B7280">' + u.desc + '</div></div>' +
-      '<div style="font-weight:700;font-size:14px;color:#2563EB">' + displayPrice + '</div>' +
+      '<div style="font-weight:700;font-size:14px;color:#5B8A8C">' + displayPrice + '</div>' +
       '</label>';
   }).join('');
   document.getElementById('upgradesTotal').style.display = 'none';
@@ -400,7 +400,7 @@ document.getElementById('leadBtn').addEventListener('click', async () => {
     }
     showFormSuccess(document.getElementById('leadForm'));
     document.getElementById('leadForm').insertAdjacentHTML('afterend',
-      '<div class="cabinet-link" style="margin-top:16px;padding:16px;background:#EFF6FF;border-radius:12px;text-align:center">' +
+      '<div class="cabinet-link" style="margin-top:16px;padding:16px;background:#E8F0EE;border-radius:12px;text-align:center">' +
       '<p style="margin-bottom:8px;font-weight:600">Заявка отправлена!</p>' +
       '<a href="/client.html" class="btn btn-primary" style="display:inline-block">Перейти в личный кабинет</a>' +
       '</div>'
@@ -445,7 +445,7 @@ planOverlay.addEventListener('click', (e) => { if (e.target === planOverlay) clo
 
 // Drop zone / file picker
 planDropZone.addEventListener('click', () => planImageInput.click());
-planDropZone.addEventListener('dragover', (e) => { e.preventDefault(); planDropZone.style.borderColor = '#2563EB'; });
+planDropZone.addEventListener('dragover', (e) => { e.preventDefault(); planDropZone.style.borderColor = '#5B8A8C'; });
 planDropZone.addEventListener('dragleave', () => { planDropZone.style.borderColor = '#D1D5DB'; });
 planDropZone.addEventListener('drop', (e) => {
   e.preventDefault(); planDropZone.style.borderColor = '#D1D5DB';
@@ -498,7 +498,7 @@ function renderPlanCanvas() {
 function drawPlanOverlay(ctx, w, h) {
   const pts = planState.points;
   if (pts.length < 2) return;
-  ctx.strokeStyle = '#2563EB';
+  ctx.strokeStyle = '#5B8A8C';
   ctx.lineWidth = 2;
   ctx.setLineDash([6, 4]);
   ctx.beginPath();
