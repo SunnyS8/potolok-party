@@ -180,6 +180,12 @@
             <button class="btn btn-primary" id="importBtn">Импорт</button>
           </div>
         </div>
+        <div id="serverProjectsWrap" style="display:none">
+          <div class="card" style="background:var(--surface);border:none;padding:0 0 6px">
+            <div class="card-title">📦 Проекты из системы <span class="count" id="serverCount"></span></div>
+          </div>
+          <div id="serverProjectList" class="project-list"></div>
+        </div>
         <div id="projectList" class="project-list">
           <div class="empty-state">
             <div style="font-size:48px;opacity:.4">📋</div>
@@ -365,6 +371,8 @@
     </div>
   </div>
 
+  <script src="/js/auth.js"></script>
+  <script src="/js/projects-api.js"></script>
   <script>
   (() => {
     'use strict';
@@ -927,6 +935,10 @@
             p.status = allDone ? 'completed' : (list.some(c => c.done) ? 'in_progress' : 'new');
             saveProjects();
             renderChecklist();
+            // Если проект системный и сдан — синхронизируем на сервер
+            if (allDone && p._system) {
+              syncSystemProjectComplete(p.id);
+            }
           }
         });
       });
@@ -1319,9 +1331,115 @@
       })();
     }
 
+    // =============== СИСТЕМНЫЕ ПРОЕКТЫ (единая сущность SaaS) ===============
+    let serverProjects = [];
+    let serverProjectMap = new Map(); // localId -> serverId (для sync при сдаче)
+
+    function convertServerProject(sp) {
+      // Конвертация серверного проекта в формат монтажника
+      const walls = (sp.items || [])
+        .filter(it => it.type === 'wall' || it.type === 'ceiling')
+        .map((it, i) => ({
+          index: i,
+          label: it.label || 'Стена ' + (i + 1),
+          width: parseFloat(it.params && it.params.width) || (it.qty || 0),
+          height: parseFloat(it.params && it.params.height) || 2.7,
+          objects: (it.params && it.params.objects) || [],
+        }));
+      const matItems = (sp.items || []).map(it => ({
+        name: it.label || 'Материал',
+        quantity: parseFloat(it.qty) || 1,
+        unit: it.unit || 'м',
+      }));
+      return {
+        id: 'sys-' + sp.id,
+        serverId: sp.id,
+        name: sp.name || 'Проект #' + sp.id,
+        address: sp.address || '',
+        room: '',
+        height: 2.7,
+        walls,
+        materials: matItems,
+        status: sp.status === 'install' ? 'in_progress' : sp.status === 'done' ? 'completed' : 'new',
+        checklist: DEFAULT_CHECKLIST.map(c => ({ ...c, done: false, doneAt: null })),
+        materialCheck: {},
+        photos: [],
+        _system: true,
+      };
+    }
+
+    async function loadServerProjects() {
+      const wrap = document.getElementById('serverProjectsWrap');
+      const list = document.getElementById('serverProjectList');
+      try {
+        if (!window.FluxAuth || !window.FluxProjects) return;
+        const data = await window.FluxAuth.me();
+        if (!data.role) return;
+        if (data.role !== 'installer' && data.role !== 'manager') return;
+
+        const res = await window.FluxProjects.Projects.list();
+        serverProjects = (res.projects || []).filter(p =>
+          p.status === 'supply' || p.status === 'install' || p.status === 'done'
+        );
+        if (!serverProjects.length) { wrap.style.display = 'none'; return; }
+
+        wrap.style.display = '';
+        document.getElementById('serverCount').textContent = '(' + serverProjects.length + ')';
+        list.innerHTML = serverProjects.map(sp => {
+          const st = sp.status === 'install' ? 'В работе' : sp.status === 'done' ? 'Сдан' : 'Закуплен';
+          const walls = (sp.items || []).filter(i => i.type === 'wall' || i.type === 'ceiling').length;
+          return `<div class="project-item" data-sysid="${sp.id}">
+            <div class="status ${sp.status === 'done' ? 'completed' : 'in_progress'}"></div>
+            <div class="name">${escapeHtml(sp.name || 'Проект #' + sp.id)}</div>
+            <div class="addr">${escapeHtml(sp.address || '')}</div>
+            <div class="meta">
+              <span>${walls} секций</span>
+              <span>${st}</span>
+            </div>
+          </div>`;
+        }).join('');
+        list.querySelectorAll('.project-item').forEach(el => {
+          el.addEventListener('click', () => {
+            const sp = serverProjects.find(x => x.id === +el.dataset.sysid);
+            if (!sp) return;
+            // Пулл системного проекта в локальную работу
+            const converted = convertServerProject(sp);
+            const existing = projects.find(p => p.id === converted.id);
+            if (existing) {
+              openProject(existing.id);
+            } else {
+              projects.push(converted);
+              serverProjectMap.set(converted.id, sp.id);
+              saveProjects();
+              openProject(converted.id);
+            }
+          });
+        });
+      } catch (e) { wrap.style.display = 'none'; }
+    }
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    // Синхронизация: при сдаче системного проекта → статус install→done на сервере
+    async function syncSystemProjectComplete(localId) {
+      const serverId = serverProjectMap.get(localId);
+      if (serverId == null) return;
+      try {
+        await window.FluxProjects.Projects.setStatus(serverId, 'done', 'Сдан монтажником');
+        const idx = serverProjects.findIndex(x => x.id === serverId);
+        if (idx >= 0) serverProjects[idx].status = 'done';
+        loadServerProjects();
+      } catch (e) { console.warn('sync failed', e); }
+    }
+
+    // Хук не требуется — синхронизация встроена в renderChecklist (см. строку allDone).
+
     // =============== INIT ===============
     loadProjects();
     renderProjects();
+    loadServerProjects();
   })();
   </script>
 </body>

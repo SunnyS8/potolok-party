@@ -14,6 +14,7 @@ const CHAT_FILE = path.join(DATA_DIR, 'chat_logs.json');
 const DEALS_FILE = path.join(DATA_DIR, 'deals.json');
 const TASKS_FILE = path.join(DATA_DIR, 'tasks.json');
 const QUOTES_FILE = path.join(DATA_DIR, 'quotes.json');
+const PROJECTS_FILE = path.join(DATA_DIR, 'projects.json');
 const ANALYTICS_FILE = path.join(DATA_DIR, 'analytics_events.json');
 const COMMENTS_FILE = path.join(DATA_DIR, 'comments.json');
 
@@ -36,11 +37,13 @@ function initSqlite() {
       CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT NOT NULL, status TEXT, source TEXT, lead_id INTEGER, done INTEGER DEFAULT 0, created_at TEXT);
       CREATE TABLE IF NOT EXISTS quotes (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT NOT NULL, status TEXT, source TEXT, lead_id INTEGER, done INTEGER DEFAULT 0, created_at TEXT);
       CREATE TABLE IF NOT EXISTS calc_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT NOT NULL, status TEXT, source TEXT, lead_id INTEGER, done INTEGER DEFAULT 0, created_at TEXT);
+      CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT NOT NULL, status TEXT, role TEXT, lead_id INTEGER, done INTEGER DEFAULT 0, created_at TEXT, updated_at TEXT);
       CREATE TABLE IF NOT EXISTS chat_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT, role TEXT, content TEXT, created_at TEXT);
       CREATE TABLE IF NOT EXISTS comments (id INTEGER PRIMARY KEY AUTOINCREMENT, entity_type TEXT, entity_id INTEGER, author TEXT, text TEXT, created_at TEXT);
       CREATE TABLE IF NOT EXISTS analytics_events (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT, data TEXT, timestamp TEXT);
       CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
       CREATE INDEX IF NOT EXISTS idx_deals_status ON deals(status);
+      CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
       CREATE INDEX IF NOT EXISTS idx_events_type ON analytics_events(type);
     `);
     useSqlite = true;
@@ -160,6 +163,7 @@ function migrateFromJson() {
   migrateJsonToTable(TASKS_FILE, 'tasks');
   migrateJsonToTable(QUOTES_FILE, 'quotes');
   migrateJsonToTable(CALC_FILE, 'calc_requests');
+  migrateJsonToTable(PROJECTS_FILE, 'projects');
 
   // comments — отдельные колонки
   if (fs.existsSync(COMMENTS_FILE)) {
@@ -346,6 +350,96 @@ function getQuotes() {
   return readJson(QUOTES_FILE, []).reverse();
 }
 
+// ─── Проекты (Projects) ─────────────────────────────────────
+function saveProject(data) {
+  const now = new Date().toISOString();
+  const entry = {
+    ...data,
+    status: data.status || 'design',
+    created_at: data.created_at || now,
+    updated_at: now,
+  };
+  if (useSqlite) {
+    const defaultRole = data.role || 'designer';
+    const stmt = db.prepare(`INSERT INTO projects (data, status, role, lead_id, done, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`);
+    const result = stmt.run(
+      JSON.stringify(entry),
+      entry.status,
+      defaultRole,
+      data.leadId != null ? data.leadId : null,
+      data.done ? 1 : 0,
+      entry.created_at,
+      now,
+    );
+    entry.id = Number(result.lastInsertRowid);
+    return entry;
+  }
+  const projects = readJson(PROJECTS_FILE, []);
+  entry.id = projects.length + 1;
+  projects.push(entry);
+  writeJson(PROJECTS_FILE, projects);
+  return entry;
+}
+
+function updateProject(id, updates) {
+  if (useSqlite) {
+    const row = db.prepare(`SELECT * FROM projects WHERE id = ?`).get(id);
+    if (!row) return null;
+    const obj = rowToEntity(row, 'projects');
+    const merged = { ...obj, ...updates, updated_at: new Date().toISOString() };
+    const stmt = db.prepare(`UPDATE projects SET data = ?, status = ?, role = ?, lead_id = ?, done = ? WHERE id = ?`);
+    stmt.run(
+      JSON.stringify(merged),
+      merged.status || null,
+      merged.role || null,
+      merged.leadId != null ? merged.leadId : null,
+      merged.done ? 1 : 0,
+      id,
+    );
+    return merged;
+  }
+  const projects = readJson(PROJECTS_FILE, []);
+  const idx = projects.findIndex(p => p.id === id);
+  if (idx === -1) return null;
+  projects[idx] = { ...projects[idx], ...updates, updated_at: new Date().toISOString() };
+  writeJson(PROJECTS_FILE, projects);
+  return projects[idx];
+}
+
+function getProjects() {
+  if (useSqlite) return listEntities('projects');
+  return readJson(PROJECTS_FILE, []).reverse();
+}
+
+function getProjectById(id) {
+  if (useSqlite) {
+    const row = db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
+    return row ? rowToEntity(row, 'projects') : null;
+  }
+  return readJson(PROJECTS_FILE, []).find(p => p.id === id) || null;
+}
+
+function deleteProject(id) {
+  if (useSqlite) {
+    const result = db.prepare('DELETE FROM projects WHERE id = ?').run(id);
+    return result.changes > 0;
+  }
+  const projects = readJson(PROJECTS_FILE, []);
+  const idx = projects.findIndex(p => p.id === id);
+  if (idx === -1) return false;
+  projects.splice(idx, 1);
+  writeJson(PROJECTS_FILE, projects);
+  return true;
+}
+
+function countProjects() {
+  if (useSqlite) {
+    const row = db.prepare('SELECT COUNT(*) AS c FROM projects').get();
+    return row ? row.c : 0;
+  }
+  return readJson(PROJECTS_FILE, []).length;
+}
+
 function trackEvent(eventType, data, timestamp) {
   const ts = timestamp || new Date().toISOString();
   if (useSqlite) {
@@ -365,7 +459,7 @@ function clearAll() {
   if (useSqlite) {
     db.exec(`
       DELETE FROM leads; DELETE FROM deals; DELETE FROM tasks; DELETE FROM quotes;
-      DELETE FROM calc_requests; DELETE FROM chat_logs; DELETE FROM comments; DELETE FROM analytics_events;
+      DELETE FROM calc_requests; DELETE FROM projects; DELETE FROM chat_logs; DELETE FROM comments; DELETE FROM analytics_events;
       DELETE FROM sqlite_sequence;
     `);
     return;
@@ -375,6 +469,7 @@ function clearAll() {
   writeJson(TASKS_FILE, []);
   writeJson(QUOTES_FILE, []);
   writeJson(CALC_FILE, []);
+  writeJson(PROJECTS_FILE, []);
   writeJson(CHAT_FILE, []);
   writeJson(COMMENTS_FILE, []);
   writeJson(ANALYTICS_FILE, []);
@@ -449,6 +544,7 @@ module.exports = {
   saveDeal, updateDeal, getDeals,
   saveTask, updateTask, getTasks,
   saveQuote, getQuotes,
+  saveProject, updateProject, getProjects, getProjectById, deleteProject, countProjects,
   trackEvent, getAnalyticsEvents,
   saveComment, getComments, getAllComments,
   clearAll,

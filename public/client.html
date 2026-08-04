@@ -287,17 +287,34 @@
             const list = document.getElementById('ordersList');
             const welcome = document.getElementById('welcomeName');
             const calcReqs = (data.calcRequests || []).map(r => ({ ...r, _type: 'calc' }));
+            const projects = (data.clientProjects || []).map(p => ({ ...p, _type: 'project' }));
             const allOrders = [...(data.deals || []), ...(data.leads || []).filter(l => !data.deals.some(d => d.leadId === l.id)), ...calcReqs];
-            const name = data.leads?.[0]?.name || data.deals?.[0]?.name || 'Клиент';
+            const name = data.leads?.[0]?.name || data.deals?.[0]?.name || projects[0]?.customer?.name || 'Клиент';
             welcome.textContent = 'Здравствуйте, ' + name + '!';
 
-            if (allOrders.length === 0) {
+            const projectsHtml = projects.length
+                ? '<div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin:16px 0 8px">Проекты СИС</div>' +
+                  projects.map(p => {
+                      const statusLabels = { design: 'Проектирование', quoted: 'Выдано КП', paid: 'Оплачено', supply: 'Закупка', install: 'Монтаж', done: 'Сдан', archive: 'Архив' };
+                      const t = p.totals || {};
+                      const sum = p.pricingLevel === 'cost' ? t.cost : p.pricingLevel === 'distributor' ? t.distributor : t.retail;
+                      return '<div class="order-card" style="border-left:3px solid var(--accent-primary)" onclick="openProjectDetail(' + p.id + ')">' +
+                          '<div class="order-header"><span class="order-id">#P-' + p.id + '</span><span class="status-badge" style="background:var(--accent-primary-light);color:var(--accent-primary)">' + (statusLabels[p.status] || p.status) + '</span></div>' +
+                          '<div class="order-title">' + (p.name || 'Проект') + '</div>' +
+                          '<div class="order-meta">' +
+                          (p.address ? '<span>' + p.address + '</span>' : '') +
+                          (sum ? '<span>' + Number(sum).toLocaleString('ru-RU') + ' ₽</span>' : '') +
+                          '<span>' + (p.updated_at ? new Date(p.updated_at).toLocaleDateString('ru-RU') : '') + '</span></div>' +
+                      '</div>';
+                  }).join('')
+                : '';
+
+            if (allOrders.length === 0 && projects.length === 0) {
                 list.innerHTML = '<div class="order-card" style="text-align:center;color:var(--text-secondary)"><p>У вас пока нет заказов</p></div>';
                 return;
             }
 
-            allOrders.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-            list.innerHTML = allOrders.map(o => {
+            list.innerHTML = projectsHtml + allOrders.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)).map(o => {
                 if (o._type === 'calc') {
                     const calcOpts = o.options ? JSON.parse(o.options) : [];
                     const prodLabel = o.productType === 'combined' ? 'Потолки+Стены' : o.productType === 'walls' ? 'СИС' : 'Потолок';
@@ -378,6 +395,57 @@
         function closeDetail() {
             hide(document.getElementById('detailSection'));
             show(document.getElementById('ordersSection'));
+        }
+
+        function openProjectDetail(id) {
+            const section = document.getElementById('detailSection');
+            const content = document.getElementById('detailContent');
+            const project = (currentData.clientProjects || []).find(p => p.id === id);
+            if (!project) return;
+            hide(document.getElementById('ordersSection'));
+            show(section);
+
+            const statusLabels = { design: 'Проектирование', quoted: 'Выдано КП', paid: 'Оплачено', supply: 'Закупка', install: 'Монтаж', done: 'Сдан', archive: 'Архив' };
+            const t = project.totals || {};
+            const sum = project.pricingLevel === 'cost' ? t.cost : project.pricingLevel === 'distributor' ? t.distributor : t.retail;
+            const items = (project.items || []).map(it =>
+                '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-light);font-size:14px"><span>' +
+                (it.label || '—') + '</span><span style="font-weight:600;white-space:nowrap">' + (it.qty || 1) + ' ' + (it.unit || 'м') + '</span></div>'
+            ).join('');
+
+            const chain = ['design', 'quoted', 'paid', 'supply', 'install', 'done'];
+            const labels = { design: 'Проект', quoted: 'КП', paid: 'Оплата', supply: 'Закупка', install: 'Монтаж', done: 'Сдан' };
+            const curIdx = chain.indexOf(project.status);
+
+            content.innerHTML = '<div class="detail-card">' +
+                '<h3>#' + project.id + ' — ' + (project.name || 'Проект СИС') + '</h3>' +
+                (project.address ? '<div class="row"><span class="label">Адрес</span><span class="value">' + project.address + '</span></div>' : '') +
+                '<div class="row"><span class="label">Статус</span><span class="value"><span class="status-badge" style="background:var(--accent-primary-light);color:var(--accent-primary)">' + (statusLabels[project.status] || project.status) + '</span></span></div>' +
+                (t.area ? '<div class="row"><span class="label">Площадь</span><span class="value">' + t.area + ' м²</span></div>' : '') +
+                (sum ? '<div class="row"><span class="label">Стоимость</span><span class="value">' + Number(sum).toLocaleString('ru-RU') + ' ₽</span></div>' : '') +
+                (project.updated_at ? '<div class="row"><span class="label">Обновлён</span><span class="value">' + new Date(project.updated_at).toLocaleDateString('ru-RU') + '</span></div>' : '') +
+            '</div>' +
+            (items ? '<div class="detail-card"><h3>Состав</h3>' + items + '</div>' : '') +
+            (project.status === 'quoted' && sum ? '<div class="detail-card"><button class="btn btn-primary" style="width:100%" onclick="payProject(' + project.id + ')">Оплатить ' + Number(sum).toLocaleString('ru-RU') + ' ₽ →</button></div>' : '') +
+            '<div class="detail-card"><h3>Этапы</h3><div class="timeline">' +
+            chain.map((s, i) => {
+                let cls = '';
+                if (i < curIdx) cls = 'done';
+                else if (i === curIdx) cls = 'current';
+                return '<div class="timeline-item ' + cls + '"><div class="t-title">' + labels[s] + '</div></div>';
+            }).join('') +
+            '</div></div>';
+        }
+
+        async function payProject(id) {
+            if (!confirm('Подтвердите оплату проекта #' + id + '?')) return;
+            try {
+                const res = await fetch('/api/client/projects/' + id + '/pay?token=' + encodeURIComponent(token), { method: 'POST' });
+                const d = await res.json();
+                if (!d.ok) { alert(d.error || 'Ошибка оплаты'); return; }
+                alert('Проект оплачен. Менеджер свяжется с вами для запуска закупки.');
+                loadOrders();
+            } catch (e) { alert('Ошибка: ' + e.message); }
         }
 
         function logout() {

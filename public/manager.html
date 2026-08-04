@@ -127,6 +127,7 @@
     <aside class="mgr-sidebar">
       <nav>
         <a href="#" class="active" data-section="dashboard">Дашборд</a>
+        <a href="#" data-section="projects">Проекты</a>
         <a href="#" data-section="leads">Лиды</a>
         <a href="#" data-section="deals">Сделки</a>
         <a href="#" data-section="calculator">Сметы</a>
@@ -160,6 +161,34 @@
           </div>
           <svg id="trendChart" width="100%" viewBox="0 0 600 180" preserveAspectRatio="xMidYMid meet"></svg>
         </div>
+      </section>
+
+      <!-- Projects (SaaS-ядро: единая сущность) -->
+      <section class="mgr-section" id="section-projects">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+          <h2 style="font-size:1.25rem;font-weight:600;">Проекты СИС</h2>
+          <button class="btn" id="projNewBtn" style="font-size:0.75rem;padding:0.4rem 0.75rem;background:var(--accent-primary);color:#fff;border:none;border-radius:6px;cursor:pointer;">+ Новый</button>
+        </div>
+        <div class="toolbar">
+          <input type="search" id="projSearch" placeholder="Поиск по названию, клиенту, адресу...">
+          <select id="projStatusFilter">
+            <option value="">Все статусы</option>
+            <option value="design">Проектирование</option>
+            <option value="quoted">Выдано КП</option>
+            <option value="paid">Оплачено</option>
+            <option value="supply">Закупка</option>
+            <option value="install">Монтаж</option>
+            <option value="done">Сдан</option>
+            <option value="archive">Архив</option>
+          </select>
+          <span class="spacer"></span>
+          <span class="role-badge" id="roleBadgeProjects"></span>
+        </div>
+        <div class="table-wrap" style="overflow-x:auto;"><table>
+          <thead><tr><th>ID</th><th>Название</th><th>Клиент</th><th>Статус</th><th>Площадь</th><th>Сумма (розница)</th><th>Действия</th></tr></thead>
+          <tbody id="projectsBody"></tbody>
+        </table></div>
+        <div class="table-wrap" id="projectsDetail" style="margin-top:1rem;display:none;"></div>
       </section>
 
       <!-- Leads -->

@@ -17,6 +17,8 @@ const combinedCalc = require('./combined');
 const exp = require('./export');
 const clientCabinet = require('./client');
 const integrations = require('./integrations');
+const projects = require('./projects');
+const auth = require('./auth');
 
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -38,6 +40,13 @@ const DEMO_TOKEN = process.env.DEMO_TOKEN || 'demo';
 function getRole(req) {
   const header = req.headers.authorization;
   const token = header && header.startsWith('Bearer ') ? header.slice(7) : req.query.token;
+
+  // Ролевые сессии (единый вход): токен создан через /api/auth/login
+  if (token) {
+    const role = auth.getRole(token);
+    if (role) return role;
+  }
+
   if (token === DEMO_TOKEN || req.query.demo === '1' || req.query.demo === 'true') return 'demo';
   if (AUTH_TOKEN) {
     if (token === AUTH_TOKEN) return 'manager';
@@ -53,7 +62,7 @@ function requireRead(req, res, next) {
 
 function requireWrite(req, res, next) {
   const role = getRole(req);
-  if (role === 'manager') { req.role = role; return next(); }
+  if (role === 'manager' || role === 'designer' || role === 'dealer' || role === 'installer') { req.role = role; return next(); }
   res.status(role === 'demo' ? 403 : 401).json({ error: role === 'demo' ? 'Демо-доступ: только просмотр' : 'Не авторизован' });
 }
 
@@ -86,6 +95,10 @@ app.use('/api/crm/deal', (req, res, next) => req.method === 'GET' ? next() : req
 app.use('/api/crm/task', (req, res, next) => req.method === 'GET' ? next() : requireWrite(req, res, next));
 app.use('/api/assistant/chat', (req, res, next) => req.method === 'GET' ? next() : requireWrite(req, res, next));
 app.use('/api/assistant/template', (req, res, next) => req.method === 'GET' ? next() : requireWrite(req, res, next));
+app.use('/api/projects', (req, res, next) => {
+  if (req.method === 'GET') return next();
+  requireWrite(req, res, next);
+});
 
 const PORT = process.env.PORT || 3000;
 const activeSessions = new Map();
@@ -748,7 +761,149 @@ app.post('/api/deal/:id/comment', requireWrite, (req, res) => {
 });
 
 app.get('/api/auth/role', (req, res) => {
-  res.json({ role: getRole(req) });
+  res.json({ role: getRole(req), pages: auth.rolePages(), keyRoles: auth.KEY_ROLES, phoneRoles: auth.PHONE_ROLES });
+});
+
+// ─── Единый вход по ролям (SaaS-ядро: Фаза 2) ────────────────
+app.post('/api/auth/login', (req, res) => {
+  try {
+    const { role, accessKey, phone, code } = req.body;
+    const normalizedRole = String(role || 'client').toLowerCase();
+    if (!auth.ROLE_PAGE[normalizedRole]) return res.status(400).json({ error: 'Неизвестная роль' });
+
+    const result = auth.KEY_ROLES.includes(normalizedRole)
+      ? auth.loginByKey(normalizedRole, accessKey)
+      : auth.loginByPhone(normalizedRole, phone, code);
+
+    if (!result.ok) {
+      const status = result.needCode ? 200 : 401;
+      return res.status(status).json(result);
+    }
+    res.json(result);
+  } catch (err) {
+    console.error('Auth login error:', err);
+    res.status(500).json({ error: 'Ошибка входа' });
+  }
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  try {
+    const header = req.headers.authorization;
+    const token = header && header.startsWith('Bearer ') ? header.slice(7) : req.query.token;
+    res.json(auth.logout(token));
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка выхода' });
+  }
+});
+
+app.get('/api/auth/me', (req, res) => {
+  try {
+    const header = req.headers.authorization;
+    const token = header && header.startsWith('Bearer ') ? header.slice(7) : req.query.token;
+    if (!token) return res.status(401).json({ error: 'Не авторизован' });
+    const session = auth.getSession(token);
+    if (!session) return res.status(401).json({ error: 'Сессия истекла' });
+    res.json({ ok: true, role: session.role, phone: session.phone, page: auth.ROLE_PAGE[session.role] });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка' });
+  }
+});
+
+// ─── Проекты (SaaS-ядро: единая сущность для всех ролей) ─────
+app.get('/api/projects', (req, res) => {
+  try {
+    const { status, role, q } = req.query;
+    const anchored = role || status || q ? { status, role, q } : undefined;
+    const list = projects.listProjects(getRole(req), anchored);
+    res.json({ projects: list, statuses: projects.PROJECT_STATUSES, statusLabels: projects.STATUS_LABELS });
+  } catch (err) {
+    console.error('Projects list error:', err);
+    res.status(500).json({ error: 'Ошибка загрузки проектов' });
+  }
+});
+
+app.post('/api/projects', (req, res) => {
+  try {
+    const project = projects.createProject(req.body, getRole(req));
+    res.status(201).json({ ok: true, project });
+  } catch (e) {
+    console.error('Project create error:', e);
+    res.status(500).json({ error: 'Ошибка создания проекта' });
+  }
+});
+
+app.get('/api/projects/stats', (req, res) => {
+  try {
+    res.json(projects.stats());
+  } catch (e) {
+    console.error('Project stats error:', e);
+    res.status(500).json({ error: 'Ошибка статистики' });
+  }
+});
+
+app.get('/api/projects/:id', (req, res) => {
+  try {
+    const project = projects.getProject(req.params.id);
+    if (!project) return res.status(404).json({ error: 'Проект не найден' });
+    res.json({ project });
+  } catch (e) {
+    console.error('Project get error:', e);
+    res.status(500).json({ error: 'Ошибка загрузки проекта' });
+  }
+});
+
+app.put('/api/projects/:id', (req, res) => {
+  try {
+    const project = projects.updateProject(req.params.id, req.body, getRole(req));
+    if (!project) return res.status(404).json({ error: 'Проект не найден' });
+    res.json({ ok: true, project });
+  } catch (e) {
+    console.error('Project update error:', e);
+    res.status(e.status || 500).json({ error: e.message || 'Ошибка изменения' });
+  }
+});
+
+app.patch('/api/projects/:id/status', (req, res) => {
+  try {
+    const { status, comment } = req.body;
+    if (!status) return res.status(400).json({ error: 'Не указан статус' });
+    const project = projects.transitionStatus(req.params.id, status, getRole(req), comment);
+    res.json({ ok: true, project });
+  } catch (e) {
+    console.error('Project status error:', e);
+    res.status(400).json({ error: e.message || 'Ошибка перехода' });
+  }
+});
+
+app.post('/api/projects/:id/items', (req, res) => {
+  try {
+    const result = projects.addItem(req.params.id, req.body, getRole(req));
+    res.status(201).json({ ok: true, ...result });
+  } catch (e) {
+    console.error('Project add item error:', e);
+    res.status(400).json({ error: e.message || 'Ошибка добавления позиции' });
+  }
+});
+
+app.delete('/api/projects/:id/items/:itemId', (req, res) => {
+  try {
+    const project = projects.removeItem(req.params.id, req.params.itemId, getRole(req));
+    res.json({ ok: true, project });
+  } catch (e) {
+    console.error('Project remove item error:', e);
+    res.status(400).json({ error: e.message || 'Ошибка удаления позиции' });
+  }
+});
+
+app.delete('/api/projects/:id', (req, res) => {
+  try {
+    const ok = projects.deleteProject(req.params.id, getRole(req));
+    if (!ok) return res.status(404).json({ error: 'Проект не найден' });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Project delete error:', e);
+    res.status(400).json({ error: e.message || 'Ошибка удаления' });
+  }
 });
 
 app.post('/api/client/code', (req, res) => {
@@ -781,9 +936,22 @@ app.get('/api/client/orders', (req, res) => {
     if (!token) return res.status(401).json({ error: 'Не авторизован' });
     const session = clientCabinet.getSession(token);
     if (!session) return res.status(401).json({ error: 'Сессия истекла' });
-    res.json({ leads: session.leads, deals: session.deals, quotes: session.quotes });
+    res.json({ leads: session.leads, deals: session.deals, quotes: session.quotes, clientProjects: session.clientProjects, calcRequests: session.calcRequests });
   } catch (err) {
     console.error('Client orders error:', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+app.post('/api/client/projects/:id/pay', (req, res) => {
+  try {
+    const token = req.query.token || (req.headers.authorization && req.headers.authorization.startsWith('Bearer ') ? req.headers.authorization.slice(7) : null);
+    if (!token) return res.status(401).json({ error: 'Не авторизован' });
+    const result = clientCabinet.payProject(token, req.params.id);
+    if (!result.ok) return res.status(400).json(result);
+    res.json({ ok: true, project: result.project });
+  } catch (err) {
+    console.error('Client pay error:', err);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });

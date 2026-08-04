@@ -1,4 +1,8 @@
 (function() {
+  // Синхронизация единого входа: flux_token (новый) -> auth_token (старый менеджер)
+  if (localStorage.getItem('flux_token') && !localStorage.getItem('auth_token')) {
+    localStorage.setItem('auth_token', localStorage.getItem('flux_token'));
+  }
   if (location.search.includes('demo') && !localStorage.getItem('auth_token')) {
     localStorage.setItem('auth_token', 'demo');
   }
@@ -730,9 +734,179 @@
     link.addEventListener('click', () => {
       const section = link.dataset.section;
       if (section === 'dashboard') loadDashboard();
+      if (section === 'projects') loadProjectsMgr();
       if (section === 'leads') loadLeads();
       if (section === 'deals') loadDeals();
       if (section === 'prices') loadPrices();
     });
   });
+
+  // =============== ПРОЕКТЫ (SaaS-ядро) ===============
+  const STATUS_LABELS = { design: 'Проектирование', quoted: 'Выдано КП', paid: 'Оплачено', supply: 'Закупка', install: 'Монтаж', done: 'Сдан', archive: 'Архив' };
+  const STATUS_COLORS = { design: '#5B8A8C', quoted: '#8A6DBF', paid: '#7DAB7D', supply: '#D4A574', install: '#5B8A8C', done: '#2F7D5B', archive: '#9A9690' };
+  let mgrProjects = [];
+
+  function projStatusBadge(st) {
+    return `<span style="display:inline-block;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.7rem;font-weight:500;color:#fff;background:${STATUS_COLORS[st] || '#888'}">${STATUS_LABELS[st] || st}</span>`;
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  async function loadProjectsMgr() {
+    const body = document.getElementById('projectsBody');
+    body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-secondary)">Загрузка...</td></tr>';
+    try {
+      const q = document.getElementById('projSearch').value.trim();
+      const status = document.getElementById('projStatusFilter').value;
+      const params = new URLSearchParams();
+      if (status) params.set('status', status);
+      if (q) params.set('q', q);
+      const res = await apiFetch('/api/projects' + (params.toString() ? '?' + params : ''));
+      if (!res) return;
+      const data = await res.json();
+      mgrProjects = data.projects || [];
+      if (!mgrProjects.length) {
+        body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-secondary)">Проектов нет</td></tr>';
+        return;
+      }
+      body.innerHTML = mgrProjects.map(p => {
+        const t = p.totals || {};
+        return `<tr>
+          <td>#${p.id}</td>
+          <td><strong>${esc(p.name || '—')}</strong><br><small style="color:var(--text-secondary)">${esc(p.address || '')}</small></td>
+          <td>${esc((p.customer && p.customer.name) || '—')}<br><small style="color:var(--text-secondary)">${esc((p.customer && p.customer.phone) || '')}</small></td>
+          <td>${projStatusBadge(p.status)}</td>
+          <td>${t.area ? t.area + ' м²' : '—'}</td>
+          <td>${t.retail ? t.retail.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
+          <td>
+            <div class="row-actions">
+              <button onclick="mgrOpenProject(${p.id})">Открыть</button>
+              <button onclick="mgrTransition(${p.id}, '${p.status}')">Статус</button>
+              <button class="btn-danger" onclick="mgrDeleteProject(${p.id})">Удалить</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+    } catch (e) {
+      body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--accent-error)">Ошибка: ' + esc(e.message) + '</td></tr>';
+    }
+  }
+
+  window.mgrOpenProject = async (id) => {
+    const detail = document.getElementById('projectsDetail');
+    detail.style.display = 'block';
+    detail.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:1rem">Загрузка...</div>';
+    try {
+      const res = await apiFetch('/api/projects/' + id);
+      if (!res) return;
+      const { project } = await res.json();
+      const t = project.totals || {};
+      const items = (project.items || []).map(it =>
+        `<tr><td>${esc(it.label || '—')}</td><td>${it.qty || 1} ${esc(it.unit || 'м')}</td><td>${(it.price || 0).toLocaleString('ru-RU')} ₽</td><td>${((it.price || 0) * (it.qty || 1)).toLocaleString('ru-RU')} ₽</td></tr>`
+      ).join('');
+      const assigned = project.assigned || {};
+      const history = (project.history || []).slice(-5).reverse().map(h =>
+        `<div style="padding:0.3rem 0;border-bottom:1px solid var(--border-light);font-size:0.75rem"><strong>${h.role || '—'}</strong> · ${esc(h.comment || '')}<br><small style="color:var(--text-secondary)">${new Date(h.at).toLocaleString('ru-RU')}</small></div>`
+      ).join('');
+      detail.innerHTML = `
+        <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border-light);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem">
+          <h3 style="font-weight:600">${esc(project.name || 'Проект')}</h3>
+          ${projStatusBadge(project.status)}
+        </div>
+        <div style="padding:1rem 1.25rem">
+          <div class="info-grid">
+            <div class="field"><span class="k">Адрес</span><span class="v">${esc(project.address || '—')}</span></div>
+            <div class="field"><span class="k">Клиент</span><span class="v">${esc((project.customer && project.customer.name) || '—')}</span></div>
+            <div class="field"><span class="k">Телефон</span><span class="v">${esc((project.customer && project.customer.phone) || '—')}</span></div>
+            <div class="field"><span class="k">Площадь</span><span class="v">${t.area ? t.area + ' м²' : '—'}</span></div>
+            <div class="field"><span class="k">Розница</span><span class="v">${t.retail ? t.retail.toLocaleString('ru-RU') + ' ₽' : '—'}</span></div>
+            <div class="field"><span class="k">Закупка</span><span class="v">${t.distributor ? t.distributor.toLocaleString('ru-RU') + ' ₽' : '—'}</span></div>
+            <div class="field"><span class="k">Себестоимость</span><span class="v">${t.cost ? t.cost.toLocaleString('ru-RU') + ' ₽' : '—'}</span></div>
+            <div class="field"><span class="k">Дилер</span><span class="v">${esc(assigned.dealer || '—')}</span></div>
+            <div class="field"><span class="k">Монтажник</span><span class="v">${esc(assigned.installer || '—')}</span></div>
+            <div class="field"><span class="k">Дизайнер</span><span class="v">${esc(assigned.designer || '—')}</span></div>
+          </div>
+          <div class="modal-section"><h4>Позиции</h4>
+            <div class="table-wrap"><table><thead><tr><th>Наименование</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr></thead><tbody>${items || '<tr><td colspan="4" style="text-align:center;color:var(--text-secondary)">Нет позиций</td></tr>'}</tbody></table></div>
+          </div>
+          <div class="modal-section"><h4>История</h4>${history || '<p style="color:var(--text-secondary);font-size:0.8rem">Пока пусто</p>'}</div>
+          <div class="row-actions" style="margin-top:0.75rem">
+            ${canWrite() ? `<button onclick="mgrAssign(${project.id}, 'installer')">Назначить монтажника</button>
+            <button onclick="mgrAssign(${project.id}, 'dealer')">Назначить дилера</button>
+            <button onclick="mgrTransition(${project.id}, '${project.status}')">Сменить статус</button>` : ''}
+            <button onclick="document.getElementById('projectsDetail').style.display='none'">Закрыть</button>
+          </div>
+        </div>`;
+    } catch (e) {
+      detail.innerHTML = '<div style="padding:1rem;color:var(--accent-error)">Ошибка: ' + esc(e.message) + '</div>';
+    }
+  };
+
+  const NEXT = { design: 'quoted', quoted: 'paid', paid: 'supply', supply: 'install', install: 'done', done: 'archive' };
+
+  window.mgrTransition = async (id, current) => {
+    const target = NEXT[current];
+    if (!target) { alert('Нет следующего статуса'); return; }
+    const comment = prompt('Комментарий к переходу (' + STATUS_LABELS[current] + ' → ' + STATUS_LABELS[target] + '):') || '';
+    try {
+      const res = await apiFetch('/api/projects/' + id + '/status', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: target, comment }),
+      });
+      if (!res) return;
+      const d = await res.json();
+      if (d.error) { alert(d.error); return; }
+      loadProjectsMgr();
+      mgrOpenProject(id);
+    } catch (e) { alert('Ошибка: ' + e.message); }
+  };
+
+  window.mgrAssign = async (id, role) => {
+    const label = role === 'installer' ? 'монтажника' : 'дилера';
+    const value = prompt('ФИО/название ' + label + ':');
+    if (!value) return;
+    try {
+      const pr = mgrProjects.find(p => p.id === id);
+      const assigned = { ...((pr && pr.assigned) || {}) };
+      assigned[role] = value;
+      const res = await apiFetch('/api/projects/' + id, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assigned }),
+      });
+      if (!res) return;
+      loadProjectsMgr();
+      mgrOpenProject(id);
+    } catch (e) { alert('Ошибка: ' + e.message); }
+  };
+
+  window.mgrDeleteProject = async (id) => {
+    if (!confirm('Удалить проект #' + id + '?')) return;
+    try {
+      const res = await apiFetch('/api/projects/' + id, { method: 'DELETE' });
+      if (!res) return;
+      loadProjectsMgr();
+    } catch (e) { alert('Ошибка: ' + e.message); }
+  };
+
+  window.mgrNewProject = async () => {
+    const name = prompt('Название проекта:');
+    if (!name) return;
+    const address = prompt('Адрес:') || '';
+    const client = prompt('Имя клиента:') || '';
+    const phone = prompt('Телефон клиента:') || '';
+    try {
+      const res = await apiFetch('/api/projects', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, address, customer: { name: client, phone } }),
+      });
+      if (!res) return;
+      loadProjectsMgr();
+    } catch (e) { alert('Ошибка: ' + e.message); }
+  };
+
+  document.getElementById('projNewBtn')?.addEventListener('click', mgrNewProject);
+  document.getElementById('projSearch')?.addEventListener('input', loadProjectsMgr);
+  document.getElementById('projStatusFilter')?.addEventListener('change', loadProjectsMgr);
 })();

@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const db = require('./db');
+const projects = require('./projects');
 
 const sessions = new Map();
 const codes = new Map();
@@ -35,9 +36,10 @@ function verifyCode(phone, code) {
     const lead = db.getLeadById(d.leadId);
     return lead && lead.phone && lead.phone.replace(/\D/g, '').includes(phone.replace(/\D/g, ''));
   });
+  const clientProjects = projects.getProjectsByCustomerPhone(phone);
 
-  sessions.set(token, { phone, leads, deals, createdAt: Date.now() });
-  return { ok: true, token, leads, deals };
+  sessions.set(token, { phone, leads, deals, clientProjects, createdAt: Date.now() });
+  return { ok: true, token, leads, deals, clientProjects };
 }
 
 function getSession(token) {
@@ -57,7 +59,8 @@ function getSession(token) {
     return leads.some(l => l.name === q.clientName) || deals.some(d => d.id === q.dealId);
   });
   const calcRequests = db.getCalcRequests().filter(r => r.clientPhone && r.clientPhone.replace(/\D/g, '').includes(phone));
-  return { phone: session.phone, leads, deals, quotes, calcRequests };
+  const clientProjects = projects.getProjectsByCustomerPhone(session.phone);
+  return { phone: session.phone, leads, deals, quotes, calcRequests, clientProjects };
 }
 
 function loginByPhone(phone) {
@@ -72,8 +75,27 @@ function loginByPhone(phone) {
     return leads.some(l => l.name === q.clientName) || deals.some(d => d.id === q.dealId);
   });
   const calcRequests = db.getCalcRequests().filter(r => r.clientPhone && r.clientPhone.replace(/\D/g, '').includes(cleaned));
-  sessions.set(token, { phone, leads, deals, quotes, calcRequests, createdAt: Date.now() });
-  return { token, leads, deals, quotes, calcRequests };
+  const clientProjects = projects.getProjectsByCustomerPhone(phone);
+  sessions.set(token, { phone, leads, deals, quotes, calcRequests, clientProjects, createdAt: Date.now() });
+  return { token, leads, deals, quotes, calcRequests, clientProjects };
 }
 
-module.exports = { requestCode, verifyCode, getSession, loginByPhone };
+// Оплата проекта клиентом (quoted → paid). Проверяем принадлежность по телефону.
+function payProject(token, projectId) {
+  const session = getSession(token);
+  if (!session) return { ok: false, error: 'Сессия истекла' };
+  const phone = String(session.phone || '').replace(/\D/g, '');
+  const project = projects.getProject(projectId);
+  if (!project) return { ok: false, error: 'Проект не найден' };
+  const customerPhone = String(project.customer && project.customer.phone || '').replace(/\D/g, '');
+  if (!customerPhone || !customerPhone.includes(phone)) {
+    return { ok: false, error: 'Это не ваш проект' };
+  }
+  if (project.status !== 'quoted') {
+    return { ok: false, error: 'Проект нельзя оплатить в статусе «' + (projects.STATUS_LABELS[project.status] || project.status) + '»' };
+  }
+  const updated = projects.transitionStatus(projectId, 'paid', 'client', 'Оплачено клиентом');
+  return { ok: true, project: updated };
+}
+
+module.exports = { requestCode, verifyCode, getSession, loginByPhone, payProject };
