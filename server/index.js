@@ -107,7 +107,7 @@ crm.init();
 
 app.post('/api/chat', chatLimiter, async (req, res) => {
   try {
-    const { message, sessionId } = req.body;
+    const { message, sessionId, estimate } = req.body;
     const sid = sessionId || crypto.randomUUID();
     if (!activeSessions.has(sid)) activeSessions.set(sid, []);
     const history = activeSessions.get(sid);
@@ -115,7 +115,8 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
     history.push({ role: 'user', content: message });
     db.saveChatMessage(sid, 'user', message);
 
-    const response = await ai.chat(history);
+    const estimateSummary = estimate && estimate.summary ? String(estimate.summary).slice(0, 400) : null;
+    const response = await ai.chat(history, estimateSummary);
     history.push(response);
     db.saveChatMessage(sid, 'assistant', response.content);
 
@@ -974,7 +975,7 @@ app.get('/api/integrations/status', (req, res) => {
 if (require.main === module) {
   app.listen(PORT, '0.0.0.0', () => {
     const provider = ai.getProviderName() || 'не настроен (работает без ИИ)';
-    console.log(`🚀 Потолок Пати AI запущен: http://localhost:${PORT}`);
+    console.log(`🚀 Флюкс AI запущен: http://localhost:${PORT}`);
     console.log(`   Провайдер: ${provider}, модель: ${ai.getModel()}`);
     console.log(`   Пакет: Growth/Automation — CRM, сметы, ассистент, аналитика`);
   });

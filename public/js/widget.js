@@ -65,19 +65,20 @@
       <div class="chat-header-info">
         <div class="chat-avatar">AI</div>
         <div>
-          <div class="chat-header-title">Потолок Пати</div>
+          <div class="chat-header-title">Флюкс</div>
           <div class="chat-header-sub">ИИ-помощник</div>
         </div>
       </div>
       <button class="chat-close" id="chatClose">✕</button>
     </div>
     <div class="chat-messages" id="chatMessages">
-      <div class="msg bot">Здравствуйте! Я ИИ-помощник компании «Потолок Пати».
+      <div class="msg bot">Здравствуйте! Я ИИ-помощник компании «Флюкс».
 
 Могу помочь с выбором потолка, рассказать о ценах или вызвать замерщика. Что вас интересует?</div>
     </div>
     <div class="chat-actions" id="chatActions">
       <button class="chat-action-btn" data-msg="Мне нужен расчёт">Мне нужен расчёт</button>
+      <button class="chat-action-btn" data-msg="Сколько у меня вышло?" id="chatEstimateBtn" style="display:none">Моя смета</button>
       <button class="chat-action-btn" data-msg="Скажите цену">Скажите цену</button>
       <button class="chat-action-btn" data-msg="Заказать замер">Заказать замер</button>
       <button class="chat-action-btn" data-msg="Позвоните мне">Позвоните мне</button>
@@ -105,6 +106,7 @@
     isOpen = !isOpen;
     panel.classList.toggle('open', isOpen);
     badge.style.display = 'none';
+    updateEstimateBtn();
     if (isOpen) input.focus();
   });
 
@@ -139,6 +141,18 @@
     if (el) el.remove();
   }
 
+  function getEstimate() {
+    const est = window.__fluxEstimate && (Date.now() - window.__fluxEstimate.at) < 5 * 60 * 1000 ? window.__fluxEstimate : null;
+    if (est && typeof est.summary === 'string' && est.summary.length > 0) return est;
+    return null;
+  }
+
+  function updateEstimateBtn() {
+    const btn = document.getElementById('chatEstimateBtn');
+    if (!btn) return;
+    btn.style.display = getEstimate() ? '' : 'none';
+  }
+
   async function sendMessage(text) {
     if (isLoading || !text.trim()) return;
     isLoading = true;
@@ -150,10 +164,11 @@
     showTyping();
 
     try {
+      const est = getEstimate();
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, sessionId })
+        body: JSON.stringify({ message: text, sessionId, estimate: est ? { summary: est.summary } : undefined })
       });
       const data = await res.json();
       sessionId = data.sessionId;
@@ -227,6 +242,12 @@
     const btn = e.target.closest('.chat-action-btn');
     if (!btn) return;
     const msg = btn.dataset.msg;
+    if (msg === 'Мне нужен расчёт' && !window.location.pathname.startsWith('/calculator')) {
+      addMessage('user', msg);
+      addMessage('bot', 'Открываю калькулятор — там можно подобрать потолки, стены или комплекс и сразу получить смету с вашими размерами.');
+      window.open('/calculator/', '_blank');
+      return;
+    }
     if (msg === 'Заказать замер' || msg === 'Позвоните мне') {
       addMessage('user', msg);
       addMessage('bot', msg === 'Позвоните мне'
@@ -244,9 +265,12 @@
       isOpen = true;
       panel.classList.add('open');
       badge.style.display = 'none';
+      updateEstimateBtn();
       input.focus();
     }
   });
+
+  updateEstimateBtn();
 
   if (!sessionId) {
     sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);

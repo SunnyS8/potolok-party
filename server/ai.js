@@ -14,7 +14,7 @@ function buildSystemPrompt() {
     // Note: actual SIS pricing is more complex - we'll show a base price
   }
 
-  return `Ты — дружелюбный помощник компании «Потолок Пати» — мы занимаемя потолками и архитектурным текстилем (стенами) «ID System»;
+  return `Ты — дружелюбный помощник компании «Флюкс» — мы занимаемя потолками и архитектурным текстилем (стенами) «ID System»;
 
   Отвечай кратко, по делу, на русском языке. Используй эмодзи умеренно.
 
@@ -158,12 +158,15 @@ async function tryCompletion(messages, system, maxTokens, temperature) {
   }
 }
 
-async function chat(messages) {
+async function chat(messages, extraContext) {
   if (!getClient()) {
-    return { role: 'assistant', content: fallbackChatResponse(messages) };
+    return { role: 'assistant', content: fallbackChatResponse(messages, extraContext) };
   }
 
-  const lastMessages = messages.slice(-10);
+  let lastMessages = messages.slice(-10);
+  if (extraContext) {
+    lastMessages = [{ role: 'system', content: 'Данные из калькулятора клиента (текущий расчёт): ' + extraContext }, ...lastMessages];
+  }
   const useFree = lowBalance || freeModelExhausted;
 
   try {
@@ -181,7 +184,7 @@ async function chat(messages) {
         if (isRateLimitError(freeErr)) {
           freeModelExhausted = true;
         }
-        return { role: 'assistant', content: fallbackChatResponse(messages) };
+        return { role: 'assistant', content: fallbackChatResponse(messages, extraContext) };
       }
     }
 
@@ -189,7 +192,7 @@ async function chat(messages) {
       freeModelExhausted = true;
     }
 
-    return { role: 'assistant', content: fallbackChatResponse(messages) };
+    return { role: 'assistant', content: fallbackChatResponse(messages, extraContext) };
   }
 }
 
@@ -223,8 +226,12 @@ async function calculatePrice(ceilingType, area, options) {
   }
 }
 
-function fallbackChatResponse(messages) {
+function fallbackChatResponse(messages, extraContext) {
   const lastMsg = messages[messages.length - 1]?.content?.toLowerCase() || '';
+
+  if (extraContext && (lastMsg.includes('смет') || lastMsg.includes('расчёт') || lastMsg.includes('картин') || lastMsg.includes('сколько у меня') || lastMsg.includes('итог') || lastMsg.includes('вышл') || lastMsg.includes('моём') || lastMsg.includes('мой калькулятор'))) {
+    return 'Ваш текущий расчёт из калькулятора:\n' + extraContext + '\n\nТочная финальная цена фиксируется после выезда замерщика. Зафиксировать заявку?';
+  }
 
   if (lastMsg.includes('цен') || lastMsg.includes('стоил') || lastMsg.includes('прайс') || lastMsg.includes('сколько')) {
     return 'Вот наш прайс:\n• Матовый ПВХ — от 450 ₽/м²\n• Глянцевый ПВХ — от 500 ₽/м²\n• Сатиновый — от 550 ₽/м²\n• Тканевый — от 750 ₽/м²\n• Двухуровневый — от 950 ₽/м²\n\nЦена зависит от площади и доп. опций. Хотите примерный расчёт?';
@@ -250,7 +257,7 @@ function fallbackChatResponse(messages) {
   if (lastMsg.includes('тканев') || lastMsg.includes('матов') || lastMsg.includes('глянц') || lastMsg.includes('сатин')) {
     return 'У каждого типа свои плюсы:\n• Матовый — классика, без бликов\n• Глянцевый — визуально увеличивает комнату\n• Сатиновый — мягкий перламутровый блеск\n• Тканевый — дышит, похож на идеальную штукатурку\n\nКакой вариант больше нравится?';
   }
-  return 'Здравствуйте! Я помощник компании «Потолок Пати» 🏠\n\nМогу рассказать о типах потолков, сориентировать по цене, вызвать замерщика. Что вас интересует?';
+  return 'Здравствуйте! Я помощник компании «Флюкс» 🏠\n\nМогу рассказать о типах потолков, сориентировать по цене, вызвать замерщика. Что вас интересует?';
 }
 
 function fallbackCalcResponse(ceilingType, area, options) {

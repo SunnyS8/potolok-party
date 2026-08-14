@@ -17,7 +17,7 @@ function generateWallPdf(project, calcResult) {
       const isCompany = false; // default to client prices
 
       // Header
-      doc.fontSize(18).text('Потолок Пати — Натяжные стены', { align: 'center' });
+      doc.fontSize(18).text('Флюкс — Натяжные стены', { align: 'center' });
       doc.moveDown(0.5);
       doc.fontSize(10).fillColor('#666').text('Проект: ' + (project.name || '—') + '  |  ' + (project.address || '—'), { align: 'center' });
       doc.fillColor('#000');
@@ -100,7 +100,7 @@ function generateWallPdf(project, calcResult) {
       doc.moveDown(1);
       doc.moveTo(40, doc.y).lineTo(520, doc.y).stroke('#ddd');
       doc.moveDown(0.5);
-      doc.fontSize(8).fillColor('#999').text('Потолок Пати · потолокпати.рф · ' + new Date().toLocaleDateString('ru-RU'), { align: 'center' });
+      doc.fontSize(8).fillColor('#999').text('Флюкс · потолокпати.рф · ' + new Date().toLocaleDateString('ru-RU'), { align: 'center' });
 
       doc.end();
     } catch (e) {
@@ -111,7 +111,7 @@ function generateWallPdf(project, calcResult) {
 
 async function generateWallXlsx(project, calcResult) {
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'Потолок Пати';
+  wb.creator = 'Флюкс';
   wb.created = new Date();
 
   // Sheet 1: Summary

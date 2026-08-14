@@ -68,7 +68,7 @@ async function generateEstimate(params) {
 
 function generateQuoteText(estimate, client) {
   const lines = [
-    '='.repeat(40), 'КОММЕРЧЕСКОЕ ПРЕДЛОЖЕНИЕ', 'Натяжные потолки — Потолок Пати', '='.repeat(40), '',
+    '='.repeat(40), 'КОММЕРЧЕСКОЕ ПРЕДЛОЖЕНИЕ', 'Натяжные потолки — Флюкс', '='.repeat(40), '',
     `Клиент: ${client.name || '—'}`, `Тип потолка: ${estimate.ceilingType}`, `Площадь: ${estimate.area} м² (${estimate.width}×${estimate.length} м)`, '',
     '--- СМЕТА ---', `Полотно: ${estimate.canvasPrice.toLocaleString()} ₽`, `Монтажный профиль: ${estimate.profilePrice.toLocaleString()} ₽`,
   ];
@@ -81,7 +81,7 @@ function generateQuoteText(estimate, client) {
   lines.push('', 'Включает: материалы, доставку, установку.');
   lines.push('Цена фиксируется после замера.', '');
   lines.push('='.repeat(40));
-  lines.push('Потолок Пати · потолокпати.рф');
+  lines.push('Флюкс · потолокпати.рф');
   return lines.join('\n');
 }
 

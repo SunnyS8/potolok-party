@@ -138,11 +138,24 @@ async function calcCeiling() {
   const ceilingType = document.getElementById('ceilingType').value;
   const area = parseFloat(document.getElementById('areaSlider').value);
   const options = getActiveOptions('tab-ceiling');
+  const optMap = Object.fromEntries(options.map(o => [o.id, o.value]));
 
   const res = await fetch('/api/calculator', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ceilingType, area, options })
+    body: JSON.stringify({
+      ceilingType,
+      area,
+      options,
+      spots: parseInt(optMap['lights']) || 0,
+      chandelier: optMap.hasOwnProperty('chandelier'),
+      pipeBypass: parseInt(optMap['pipes']) || 0,
+      cornice: parseFloat(optMap['cornice']) || 0,
+      ledStrip: parseFloat(optMap['ledStrip']) || 0,
+      hatch: parseInt(optMap['hatch']) || 0,
+      vent: parseInt(optMap['vent']) || 0,
+      niche: parseFloat(optMap['niche']) || 0,
+    })
   });
   const data = await res.json();
   if (data.calcId) lastCalcId = data.calcId;
