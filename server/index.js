@@ -69,11 +69,18 @@ function requireWrite(req, res, next) {
 const app = express();
 app.set('trust proxy', 1);
 
-app.get(['/drawing', '/drawing/'], (req, res) => res.redirect(301, '/calculator/'));
-app.get('/drawing/*', (req, res) => res.redirect(301, '/calculator/'));
-app.get('/calculator.html', (req, res) => res.redirect(301, '/calculator/'));
+// ─── Единая платформа (React SPA) ────────────────────────────
+const appDir = path.join(__dirname, '..', 'public', 'app');
+app.use('/app', express.static(appDir));
+app.get('/app', (req, res) => res.redirect(302, '/app/'));
+app.get('/app/*', (req, res) => res.sendFile(path.join(appDir, 'index.html')));
 
-app.use('/calculator', express.static(path.join(__dirname, '..', 'public', 'calculator')));
+// Старые маршруты калькулятора/рисования — в единый SPA
+app.get(['/drawing', '/drawing/'], (req, res) => res.redirect(301, '/app/calculate'));
+app.get('/drawing/*', (req, res) => res.redirect(301, '/app/calculate'));
+app.get('/calculator.html', (req, res) => res.redirect(301, '/app/calculate'));
+app.get(['/calculator', '/calculator/'], (req, res) => res.redirect(301, '/app/calculate'));
+app.get('/calculator/*', (req, res) => res.redirect(301, '/app/calculate'));
 
 app.use(cors());
 app.use(express.json());

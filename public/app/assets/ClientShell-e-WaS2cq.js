@@ -1,0 +1,1 @@
+import{j as e}from"./index-CokdIUvT.js";import{R as l}from"./RoleShell-DUbENgW7.js";function r(){return e.jsx(l,{role:"client",phaseLabel:"Грань «Клиент» будет собрана в Фазе 2: заказы, КП, оплата."})}export{r as default};
