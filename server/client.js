@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const db = require('./db');
 const projects = require('./projects');
+const auth = require('./auth');
 
 const sessions = new Map();
 const codes = new Map();
@@ -44,23 +45,35 @@ function verifyCode(phone, code) {
 
 function getSession(token) {
   const session = sessions.get(token);
-  if (!session) return null;
+  if (!session) {
+    // SPA-вход (auth.js) → клиент логинится по роли, token из другой сессии.
+    // Принимаем его наравне с кабинетным токеном.
+    const authS = auth.getSession(token);
+    if (authS && authS.role === 'client') {
+      return buildSession(authS.phone);
+    }
+    return null;
+  }
   if (Date.now() - session.createdAt > 86400000) {
     sessions.delete(token);
     return null;
   }
-  const phone = session.phone.replace(/\D/g, '');
-  const leads = db.getLeads().filter(l => l.phone && l.phone.replace(/\D/g, '').includes(phone));
+  return buildSession(session.phone);
+}
+
+function buildSession(phone) {
+  const cleaned = String(phone || '').replace(/\D/g, '');
+  const leads = db.getLeads().filter(l => l.phone && l.phone.replace(/\D/g, '').includes(cleaned));
   const deals = db.getDeals().filter(d => {
     const lead = db.getLeadById(d.leadId);
-    return lead && lead.phone && lead.phone.replace(/\D/g, '').includes(phone);
+    return lead && lead.phone && lead.phone.replace(/\D/g, '').includes(cleaned);
   });
   const quotes = db.getQuotes().filter(q => {
     return leads.some(l => l.name === q.clientName) || deals.some(d => d.id === q.dealId);
   });
-  const calcRequests = db.getCalcRequests().filter(r => r.clientPhone && r.clientPhone.replace(/\D/g, '').includes(phone));
-  const clientProjects = projects.getProjectsByCustomerPhone(session.phone);
-  return { phone: session.phone, leads, deals, quotes, calcRequests, clientProjects };
+  const calcRequests = db.getCalcRequests().filter(r => r.clientPhone && r.clientPhone.replace(/\D/g, '').includes(cleaned));
+  const clientProjects = projects.getProjectsByCustomerPhone(phone);
+  return { phone, leads, deals, quotes, calcRequests, clientProjects };
 }
 
 function loginByPhone(phone) {

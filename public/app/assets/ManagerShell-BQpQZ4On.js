@@ -1,1 +1,0 @@
-import{j as e}from"./index-CokdIUvT.js";import{R as r}from"./RoleShell-DUbENgW7.js";function l(){return e.jsx(r,{role:"manager",phaseLabel:"Грань «Менеджер» будет собрана в Фазе 3: CRM, лиды, сделки, прайсы, ассистент."})}export{l as default};

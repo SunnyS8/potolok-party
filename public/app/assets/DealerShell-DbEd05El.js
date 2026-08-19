@@ -1,0 +1,1 @@
+import{j as e}from"./index-Ck2rDkYU.js";import{R as r}from"./RoleShell-ByFbNlVe.js";function a(){return e.jsx(r,{role:"dealer",phaseLabel:"Грань «Дилер» будет собрана в Фазе 3: закупка, маржа, юнит-комплект."})}export{a as default};

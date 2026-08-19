@@ -1,1 +1,0 @@
-import{j as e}from"./index-CokdIUvT.js";import{R as r}from"./RoleShell-DUbENgW7.js";function l(){return e.jsx(r,{role:"designer",phaseLabel:"Грань «Дизайнер» будет собрана в Фазе 3: проекты, смета, КП."})}export{l as default};
