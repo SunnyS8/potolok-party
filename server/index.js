@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
 const ai = require('./ai');
@@ -21,6 +22,33 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Слишком много запросов, попробуйте позже' },
 });
+
+const DATA_DIR = process.env.DATA_DIR
+  ? process.env.DATA_DIR
+  : process.env.VERCEL === '1'
+    ? '/tmp/potolok-data'
+    : path.join(__dirname, '..', 'data');
+const PLANS_DIR = path.join(DATA_DIR, 'plans');
+
+const PLAN_MIME = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' };
+
+function savePlanFile(leadId, dataUrl) {
+  if (!dataUrl || typeof dataUrl !== 'string') return null;
+  const m = /^data:([^;]+);base64,(.+)$/.exec(dataUrl.trim());
+  if (!m) return null;
+  const ext = PLAN_MIME[m[1].toLowerCase()];
+  if (!ext) return null;
+  const buf = Buffer.from(m[2], 'base64');
+  if (!buf.length || buf.length > 10 * 1024 * 1024) return null;
+  fs.mkdirSync(PLANS_DIR, { recursive: true });
+  const file = `lead-${leadId}.${ext}`;
+  fs.writeFileSync(path.join(PLANS_DIR, file), buf);
+  return file;
+}
+
+function normalizePhone(v) {
+  return String(v || '').replace(/\D/g, '');
+}
 
 const app = express();
 app.set('trust proxy', 1);
@@ -50,15 +78,69 @@ app.post('/api/lead', async (req, res) => {
       hasLights: data.hasLights ? 1 : 0,
       notes: data.notes || '',
       upgrades: data.upgrades || '',
+      total: data.total != null ? Math.round(Number(data.total)) || 0 : null,
+      estimate: data.estimate && typeof data.estimate === 'object' ? data.estimate : null,
+      calc: data.calc && typeof data.calc === 'object' ? data.calc : null,
     });
-    notify.notifyAll(lead);
-    integrations.sendToCrm(lead).then(res => {
-      if (res.sentCount === 0) console.log('CRM integration skipped:', res.results.map(r => r.reason).join('; '));
+    const planFile = savePlanFile(lead.id, data.plan);
+    if (planFile) db.updateLead(lead.id, { hasPlan: 1, planFile });
+    const saved = db.getLeadById(lead.id);
+    notify.notifyAll(saved);
+    integrations.sendToCrm(saved).then(r => {
+      if (r.sentCount === 0) console.log('CRM integration skipped:', r.results.map(x => x.reason).join('; '));
     }).catch(err => console.error('CRM integration error:', err.message));
-    res.json({ ok: true, id: lead.id });
+    res.json({ ok: true, id: lead.id, status: saved.status || 'new', createdAt: saved.created_at || null, hasPlan: !!planFile });
   } catch (err) {
     console.error('Lead error:', err);
     res.status(500).json({ error: 'Ошибка сохранения' });
+  }
+});
+
+app.get('/api/my/leads', (req, res) => {
+  try {
+    const phone = normalizePhone(req.query.phone || '');
+    if (!phone) return res.status(400).json({ error: 'Укажите телефон' });
+    const leads = db.getLeads()
+      .filter(l => l && normalizePhone(l.phone) === phone)
+      .sort((a, b) => (b.id || 0) - (a.id || 0));
+    res.json(leads.map(l => ({
+      id: l.id,
+      createdAt: l.created_at || null,
+      status: l.status || 'new',
+      productType: l.productType || 'ceiling',
+      ceilingType: l.ceilingType || '',
+      area: l.area != null ? Number(l.area) : null,
+      wallArea: l.wallArea != null ? Number(l.wallArea) : null,
+      hasWalls: l.hasWalls ? 1 : 0,
+      wallSystem: l.wallSystem || '',
+      total: l.total != null ? Number(l.total) : null,
+      hasPlan: l.hasPlan ? 1 : 0,
+      estimate: l.estimate || null,
+      calc: l.calc || null,
+      notes: l.notes || '',
+    })));
+  } catch (err) {
+    console.error('my/leads error:', err);
+    res.status(500).json({ error: 'Ошибка' });
+  }
+});
+
+app.get('/api/lead-plan/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!(id > 0)) return res.status(400).end();
+    const lead = db.getLeadById(id);
+    if (!lead || !lead.planFile) return res.status(404).end();
+    const ext = String(lead.planFile).split('.').pop().toLowerCase();
+    const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
+    const file = path.join(PLANS_DIR, lead.planFile);
+    if (!fs.existsSync(file)) return res.status(404).end();
+    res.set('Content-Type', mime);
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.sendFile(file);
+  } catch (err) {
+    console.error('lead-plan error:', err);
+    res.status(500).end();
   }
 });
 

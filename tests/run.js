@@ -106,6 +106,32 @@ async function stopServer() {
   check('lead 200', lead.status === 200);
   check('lead ok=true, id есть', lead.data.ok === true && lead.data.id > 0);
 
+  console.log('\n— /api/lead с планом + сметой —');
+  const tinyPng = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  const planLead = await api('POST', '/api/lead', {
+    name: 'С Планом', phone: '+79990002233', source: 'calculator', productType: 'ceiling', area: 20,
+    plan: tinyPng, total: 15250,
+    estimate: { title: '', items: [{ name: 'Полотно', quantity: 20, unit: 'м²', unitPrice: 450, total: 9000 }], grandTotal: 15250, discountLabel: '', discountSavings: 0 },
+    calc: { type: 'ceiling', ceilingType: 'Матовый ПВХ', len: 5, wid: 4, hgt: 2.7, opts: { spots: 1 } },
+  });
+  check('lead+план 200, hasPlan=true', planLead.status === 200 && planLead.data.hasPlan === true);
+  check('lead+план создан', planLead.data.ok === true && planLead.data.id > 0);
+
+  console.log('\n— /api/my/leads (кабинет) —');
+  const my = await api('GET', '/api/my/leads?phone=' + encodeURIComponent('+7 999 000-22-33'));
+  check('my/leads 200', my.status === 200);
+  const myLead = (my.data || []).find(l => l.id === planLead.data.id);
+  check('заявка найдена по телефону', !!myLead);
+  check('в заявке есть план и смета', myLead && myLead.hasPlan === 1 && myLead.total === 15250 && myLead.estimate && myLead.estimate.items.length === 1 && myLead.calc && myLead.calc.len === 5);
+  const myEmpty = await api('GET', '/api/my/leads?phone=' + encodeURIComponent('+79995556677'));
+  check('my/leads пустой для чужого телефона', myEmpty.status === 200 && myEmpty.data.length === 0);
+  const myNoPhone = await api('GET', '/api/my/leads');
+  check('my/leads без телефона -> 400', myNoPhone.status === 400);
+
+  console.log('\n— /api/lead-plan/:id —');
+  const planImg = await api('GET', '/api/lead-plan/' + planLead.data.id);
+  check('lead-plan 200 image/png', planImg.status === 200 && planImg.contentType.includes('image/png'));
+
   console.log('\n— /api/export/pdf —');
   const pdf = await api('POST', '/api/export/pdf', { title: 'Смета', items: [{ name: 'Полотно', quantity: 20, unit: 'м²', unitPrice: 600, total: 12000 }], grandTotal: 12000 });
   check('pdf 200', pdf.status === 200);
@@ -243,5 +269,22 @@ async function frontendTests(check) {
   $q('#lead-form').dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true }));
   const leadOk = await waitFor(() => !$q('#lead-success').classList.contains('hidden'), 6000);
   check('заявка отправлена и показан успех', leadOk);
+
+  /* ── Кабинет ── */
+  click('#btn-restart');
+  await waitFor(() => $q('#step-type').classList.contains('on'));
+  check('после рестарта шаг результата скрыт', !$q('#step-result').classList.contains('on'));
+  click('#btn-account');
+  check('кабинет открылся', !$q('#account').classList.contains('hidden'));
+  setVal('#account-phone', '+79990001122');
+  $q('#account-form').dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true }));
+  const accountLoaded = await waitFor(() => !$q('#account-list').classList.contains('hidden'), 6000);
+  check('кабинет: заявки загружены', accountLoaded);
+  check('кабинет: карточки отрисованы', $all('#account-list .account-card').length >= 1);
+  check('кабинет: кнопки PDF и повторить есть', $all('#account-list button[data-act="pdf"]').length >= 1 && $all('#account-list button[data-act="repeat"]').length >= 1);
+  $all('#account-list .account-card')[0].querySelector('button[data-act="repeat"]').click();
+  const restored = await waitFor(() => $q('#step-result').classList.contains('on'), 8000);
+  check('кабинет: повтор расчёта открыл результат', restored);
+  check('кабинет закрыт после повтора', $q('#account').classList.contains('hidden'), 'cls=' + $q('#account').className);
   dom.window.close();
 }

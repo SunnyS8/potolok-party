@@ -22,6 +22,7 @@
     },
     debounce: null,
     lastPayload: null,
+    planDataUrl: null,
   };
 
   const els = {};
@@ -33,6 +34,9 @@
     'result-headline', 'result-saving', 'sticky-sum', 'sticky-saving', 'lead-form',
     'lead-name', 'lead-phone', 'lead-consent', 'lead-submit', 'lead-loading', 'lead-success', 'lead-error',
     'calc-loading', 'calc-error', 'sticky', 'toast',
+    'btn-account', 'account', 'account-close', 'account-form', 'account-phone', 'account-go',
+    'account-err', 'account-loading', 'account-list',
+    'lead-plan', 'plan-drop', 'plan-preview', 'plan-preview-img', 'plan-remove',
   ];
   function cacheEls() { IDS.forEach(id => els[id] = document.getElementById(id)); }
 
@@ -406,6 +410,7 @@
     els['lead-loading'].classList.remove('hidden');
     els['lead-error'].classList.add('hidden');
     const { len, wid, hgt } = dims();
+    const pdf = buildPdfItems();
     const body = {
       name, phone, source: 'calculator',
       productType: state.type === 'ceiling' ? 'ceiling' : state.type === 'walls' ? 'walls' : 'combined',
@@ -416,6 +421,10 @@
       wallSystem: state.type !== 'ceiling' ? 'sis' : '',
       upgrades: '',
       notes: '',
+      plan: state.planDataUrl || '',
+      total: pdf.grandTotal || null,
+      estimate: { title: '', items: pdf.items, grandTotal: pdf.grandTotal, discountLabel: pdf.discountLabel, discountSavings: pdf.discountSavings },
+      calc: { type: state.type, ceilingType: state.type === 'walls' ? '' : els['in-ceiling-type'].value, len, wid, hgt, opts: Object.assign({}, state.opts) },
     };
     try {
       const r = await fetch('/api/lead', {
@@ -435,10 +444,174 @@
     }
   }
 
+  /* ─── План комнаты ─── */
+  function compressImage(dataUrl, cb) {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1600;
+      const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      cb(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => cb(dataUrl);
+    img.src = dataUrl;
+  }
+
+  function handlePlanFile(file) {
+    if (!file) return;
+    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) { toast('Поддерживаются PNG, JPG, WEBP', true); els['lead-plan'].value = ''; return; }
+    if (file.size > 5 * 1024 * 1024) { toast('Файл больше 5 МБ', true); els['lead-plan'].value = ''; return; }
+    const rd = new FileReader();
+    rd.onload = () => compressImage(rd.result, (dataUrl) => {
+      state.planDataUrl = dataUrl;
+      els['plan-preview-img'].src = dataUrl;
+      els['plan-drop'].classList.add('hidden');
+      els['plan-preview'].classList.remove('hidden');
+    });
+    rd.readAsDataURL(file);
+  }
+
+  /* ─── Личный кабинет ─── */
+  const STATUS = { new: 'Новая', in_work: 'В работе', deal: 'В работе', won: 'Выполнена', done: 'Выполнена', lost: 'Закрыта' };
+  function productLabel(t) {
+    return t === 'combined' ? 'Комплекс (потолок + стены)'
+      : t === 'walls' ? 'Бесшовные стены (СИС)' : 'Натяжной потолок';
+  }
+  function acDate(s) {
+    if (!s) return '';
+    const d = new Date(s);
+    return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
+  function openAccount() {
+    els['account'].classList.remove('hidden');
+    document.body.classList.add('no-scroll');
+    els['account-phone'].focus();
+  }
+
+  function closeAccount() {
+    els['account'].classList.add('hidden');
+    document.body.classList.remove('no-scroll');
+  }
+
+  async function loadAccount(e) {
+    e.preventDefault();
+    const phone = els['account-phone'].value.replace(/\D/g, '');
+    if (phone.length < 10) { toast('Укажите корректный телефон', true); els['account-phone'].focus(); return; }
+    els['account-loading'].classList.remove('hidden');
+    els['account-err'].classList.add('hidden');
+    els['account-list'].classList.add('hidden');
+    try {
+      const r = await fetch('/api/my/leads?phone=' + encodeURIComponent(phone));
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const leads = await r.json();
+      els['account-loading'].classList.add('hidden');
+      if (!leads.length) { els['account-err'].classList.remove('hidden'); return; }
+      renderAccountList(leads);
+    } catch (err) {
+      els['account-loading'].classList.add('hidden');
+      toast('Не удалось загрузить заявки', true);
+    }
+  }
+
+  function accountCard(lead) {
+    const st = STATUS[lead.status] || 'Новая';
+    const area = lead.productType !== 'walls' && lead.area != null
+      ? lead.area.toLocaleString('ru-RU') + ' м²'
+      : lead.wallArea != null ? lead.wallArea.toLocaleString('ru-RU') + ' м²' : '';
+    const ceiling = lead.productType !== 'walls' && lead.ceilingType ? ' · ' + lead.ceilingType : '';
+    const total = lead.total != null ? fmtMoney(lead.total) : '';
+    const thumb = lead.hasPlan
+      ? '<img class="ac-plan" src="/api/lead-plan/' + lead.id + '" alt="План комнаты">' : '';
+    return '<li class="account-card" data-id="' + lead.id + '">' +
+      '<div class="ac-top">' +
+        '<div class="ac-titles"><span class="ac-prod">' + productLabel(lead.productType) + '</span>' +
+        '<span class="ac-date">' + acDate(lead.createdAt) + '</span></div>' +
+        '<span class="status-badge">' + st + '</span>' +
+      '</div>' +
+      '<div class="ac-meta">' + area + ceiling + '</div>' +
+      (total ? '<div class="ac-total">Итого: <b>' + total + '</b></div>' : '') +
+      thumb +
+      '<div class="ac-actions">' +
+        '<button class="btn btn-ghost" type="button" data-act="pdf">Смета PDF</button>' +
+        '<button class="btn btn-primary" type="button" data-act="repeat">Повторить расчёт</button>' +
+      '</div>' +
+    '</li>';
+  }
+
+  function renderAccountList(leads) {
+    const list = els['account-list'];
+    list.innerHTML = '<ul>' + leads.map(accountCard).join('') + '</ul>';
+    list.classList.remove('hidden');
+  }
+
+  async function accountPdf(lead) {
+    const est = lead.estimate;
+    if (!est || !Array.isArray(est.items) || !est.items.length) { toast('Смета для этой заявки недоступна', true); return; }
+    const title = lead.productType === 'combined' ? 'Смета — комплекс «Потолок + стены»'
+      : lead.productType === 'walls' ? 'Смета — бесшовные стены (СИС)' : 'Смета — натяжной потолок';
+    try {
+      const r = await fetch('/api/export/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, items: est.items, grandTotal: est.grandTotal || 0, upgradesTotal: 0, discountLabel: est.discountLabel || '', discountSavings: est.discountSavings || 0 }),
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const blob = await r.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'smeta-' + lead.id + '.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      toast('Смета скачана');
+    } catch (err) {
+      toast('Не удалось сформировать PDF', true);
+    }
+  }
+
+  function repeatCalc(lead) {
+    const c = lead.calc;
+    if (!c || !c.type) { toast('Данные расчёта недоступны', true); return; }
+    closeAccount();
+    state.type = c.type;
+    $$('.type-card').forEach(card => card.classList.toggle('selected', card.dataset.type === c.type));
+    els['field-ceiling-type'].classList.toggle('hidden', c.type === 'walls');
+    els['field-height'].classList.toggle('hidden', c.type === 'ceiling');
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v == null ? '' : v; };
+    set('in-length', c.len != null ? String(c.len).replace('.', ',') : '');
+    set('in-width', c.wid != null ? String(c.wid).replace('.', ',') : '');
+    set('in-height', c.hgt != null ? String(c.hgt).replace('.', ',') : '');
+    if (c.ceilingType && els['in-ceiling-type']) {
+      const ok = Array.from(els['in-ceiling-type'].options).some(o => o.value === c.ceilingType);
+      if (ok) els['in-ceiling-type'].value = c.ceilingType;
+    }
+    Object.keys(state.opts).forEach(k => {
+      if (c.opts && c.opts[k] != null) state.opts[k] = c.opts[k];
+    });
+    state.result = null;
+    state.lastPayload = null;
+    renderSticky(false);
+    recalc();
+    showStep(4);
+    toast('Расчёт восстановлен');
+  }
+
   function resetAll() {
     state.type = null;
     state.result = null;
     state.lastPayload = null;
+    state.planDataUrl = null;
+    els['plan-preview'].classList.add('hidden');
+    els['plan-drop'].classList.remove('hidden');
+    els['lead-plan'].value = '';
     Object.keys(state.opts).forEach(k => state.opts[k] = (k === 'chandelier' || k === 'soundproof') ? false : 0);
     ['in-length', 'in-width', 'in-height'].forEach(id => document.getElementById(id).value = '');
     els['lead-form'].classList.remove('hidden');
@@ -526,9 +699,41 @@
     els['btn-restart'].addEventListener('click', resetAll);
     els['lead-form'].addEventListener('submit', submitLead);
 
+    els['lead-plan'].addEventListener('change', () => handlePlanFile(els['lead-plan'].files && els['lead-plan'].files[0]));
+    els['plan-remove'].addEventListener('click', () => {
+      state.planDataUrl = null;
+      els['lead-plan'].value = '';
+      els['plan-preview'].classList.add('hidden');
+      els['plan-drop'].classList.remove('hidden');
+    });
+
+    els['btn-account'].addEventListener('click', openAccount);
+    els['account-close'].addEventListener('click', closeAccount);
+    els['account-form'].addEventListener('submit', loadAccount);
+    els['account-list'].addEventListener('click', async (ev) => {
+      const btn = ev.target.closest('button[data-act]');
+      if (!btn) return;
+      const card = ev.target.closest('.account-card');
+      const id = card ? parseInt(card.dataset.id, 10) : 0;
+      const act = btn.dataset.act;
+      try {
+        const r = await fetch('/api/my/leads?phone=' + encodeURIComponent(els['account-phone'].value.replace(/\D/g, '')));
+        if (!r.ok) return;
+        const leads = await r.json();
+        const lead = leads.find(l => l.id === id);
+        if (!lead) return;
+        if (act === 'pdf') accountPdf(lead);
+        else if (act === 'repeat') repeatCalc(lead);
+      } catch (err) { /* ignore */ }
+    });
+
     els['lead-phone'].addEventListener('input', () => {
       const v = els['lead-phone'].value.replace(/[^\d+]/g, '').slice(0, 16);
       els['lead-phone'].value = v;
+    });
+    els['account-phone'].addEventListener('input', () => {
+      const v = els['account-phone'].value.replace(/[^\d+]/g, '').slice(0, 16);
+      els['account-phone'].value = v;
     });
   }
 
