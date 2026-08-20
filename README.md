@@ -1,70 +1,63 @@
-# Потолок Пати — AI-ассистент для потолочной компании
+# СИС — калькулятор натяжных потолков и стен
 
-ИИ-помощник для приёма заявок, расчёта смет и автоматизации продаж.
+Один продукт: смета на натяжной потолок, бесшовные стены (СИС) или комплекс «потолок + стены» (скидка 12%) за 15 секунд. В конце расчёта — компактная форма заявки (имя, телефон).
 
-**Состав:**
-- Чат-бот на сайте (приём лидов, квалификация, запись на замер)
-- Калькулятор смет (тип полотна, свет, профили, карнизы, ниши, допработы)
-- Панель менеджера (CRM, сделки, задачи, аналитика)
-- Ассистент менеджера (шаблоны сообщений, FAQ)
-- Интеграция с Bitrix24 / MegaCRM
-- Экспорт отчётов (CSV)
+**Стек:** Node.js, Express, SQLite (Node 22+), vanilla-фронтенд (без сборки), jsdom для тестов фронтенда.
 
-**Стек:** Node.js, Express, OpenAI SDK (Hubris), JSON-хранилище
+## Состав
 
-## Безопасность
+- `/` — калькулятор смет (React-бандл заменён на vanilla-приложение)
+  - Шаги: тип работ → размеры → опции → итог (live-пересчёт, sticky-итог)
+  - Скачивание сметы в PDF
+  - Форма заявки → `/api/lead` (уведомления email/Telegram, передача в Bitrix24/MegaCRM — опционально)
+- API:
+  - `GET /api/prices` — прайс
+  - `POST /api/calculator` — потолок
+  - `POST /api/walls/calculate` — стены (быстрый и детальный режимы)
+  - `POST /api/calculator/combined` — комплекс
+  - `POST /api/export/pdf`, `POST /api/walls/export/pdf` — PDF-смета
+  - `POST /api/lead` — заявка
+  - `GET /api/health` — проверка
 
-- **Rate limiting:** 100 запросов/мин на API, 30 запросов/мин на чат
-- **Аутентификация:** опциональный `AUTH_TOKEN` в `.env` для доступа к панели менеджера и CRM API
+Всё остальное (роли, CRM, чат-бот, аналитика, лендинги) из продукта вырезано.
 
 ## Быстрый старт
 
 ```bash
-git clone https://github.com/ваш-аккаунт/potolok-party.git
-cd potolok-paty
 npm install
-# На Windows PowerShell / Git Bash
-cp .env.example .env
-# В командной строке Windows (cmd.exe)
 copy .env.example .env
-# отредактировать .env — вставить ключ Hubris при необходимости
 npm start
 ```
 
 Открыть `http://localhost:3000`
 
-## Демонстрация на Потолок Party
-
-Для локальной презентации в демо-режиме, когда нужны примеры заказов, менеджер и монтажник сразу доступны:
+## Тесты
 
 ```bash
-npm run demo
+npm test
 ```
 
-Откройте `http://localhost:3000/qr.html?demo` и переходите в нужный режим:
-- Менеджер: `http://localhost:3000/manager.html?demo`
-- Монтажник: `http://localhost:3000/installer.html?demo`
-- Калькулятор: `http://localhost:3000/calculator.html`
+Проверяют расчётные API (потолок/стены/комплекс), заявку, PDF и полный сценарий фронтенда в jsdom (выбор типа, размеры, опции, итог, PDF, отправка заявки).
 
 ## Деплой на Render
 
 1. Залить код на GitHub
-2. На render.com → New Web Service → выбрать репозиторий
-3. Build Command: `npm install`
-4. Start Command: `node server/index.js`
-5. В секретах добавить переменные из `.env.example`
-6. Deploy
+2. render.com → New → Blueprint → выбрать репозиторий (используется `render.yaml`)
+3. Тариф `starter` — persistent disk `/var/data` (данные не теряются при перезапуске)
+4. В секретах: `HUBRIS_API_KEY`, `HUBRIS_MODEL` (или `OPENAI_API_KEY`), `NOTIFY_EMAIL`
+5. Deploy
 
 ## Переменные окружения
 
 | Переменная | Обязательно | Описание |
 |---|---|---|
-| HUBRIS_API_KEY | да | Ключ Hubris (sk-gw-...) |
-| HUBRIS_BASE_URL | да | https://api.hubris.pw/v1 |
-| HUBRIS_MODEL | да | hubris/free |
-| AUTH_TOKEN | нет | Токен для панели менеджера и CRM API |
+| HUBRIS_API_KEY | нет | Ключ Hubris (sk-gw-...) |
+| HUBRIS_BASE_URL | нет | https://api.hubris.pw/v1 |
+| HUBRIS_MODEL | нет | Модель Hubris (не `hubris/free`) |
+| OPENAI_API_KEY | нет | Запасной провайдер |
 | PORT | нет | 3000 по умолчанию |
-| BITRIX24_WEBHOOK | нет | Для интеграции с Bitrix24 |
-| MEGACRM_API_KEY | нет | Для интеграции с MegaCRM |
-| SMTP_* | нет | Для email-уведомлений |
-| TELEGRAM_BOT_TOKEN | нет | Для Telegram-уведомлений |
+| DATA_DIR | нет | Путь к папке с данными (SQLite) |
+| NOTIFY_EMAIL | нет | Email для уведомлений о заявках |
+| SMTP_* | нет | Настройки SMTP |
+| TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID | нет | Уведомления в Telegram |
+| BITRIX24_WEBHOOK / MEGACRM_API_KEY | нет | Передача заявок в CRM |

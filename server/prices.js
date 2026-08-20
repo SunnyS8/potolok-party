@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const file = path.join(__dirname, '..', 'data', 'prices.json');
+const dataDir = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
+const file = path.join(dataDir, 'prices.json');
 
 const defaults = {
   ceilingTypes: [

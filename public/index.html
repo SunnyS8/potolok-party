@@ -3,330 +3,198 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>СИС — Система идеальных стен · Архитектурный текстиль MSD</title>
-  <meta name="description" content="Система идеальных стен (СИС): бесшовный архитектурный текстиль MSD на скрытом алюминиевом каркасе ID System. Ремонт за 1–2 дня без грязи, шумоизоляция до 40 дБ, гарантия 30 лет.">
+  <title>СИС — калькулятор натяжных потолков и стен</title>
+  <meta name="description" content="Смета на натяжные потолки и бесшовные стены (СИС) за 15 секунд. Комплексный заказ — скидка 12%.">
+  <meta name="theme-color" content="#5B8A8C">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%235B8A8C'/%3E%3Ctext x='32' y='44' font-family='Arial,sans-serif' font-size='34' font-weight='800' fill='%23fff' text-anchor='middle'%3E%D0%A1%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/landing.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/calculator.css">
 </head>
-<body class="lp">
-  <!-- ═══ ШАПКА ═════════════════════════════════════════ -->
-  <header class="lp-header">
-    <div class="lp-wrap lp-header-inner">
-      <a href="/" class="lp-brand">СИС <em>· идеальные стены</em></a>
-      <nav class="lp-nav" aria-label="Главное меню">
-        <a href="#segments">Аудитории</a>
-        <a href="#why">Почему СИС</a>
-        <a href="#system">Технология</a>
-        <a href="#compare">Сравнение</a>
-        <a href="#pricing">Цены</a>
-      </nav>
-      <div class="lp-header-cta">
-        <a href="/calculator/" class="lp-btn lp-btn--primary">Рассчитать <span class="lp-arrow">→</span></a>
-      </div>
+<body>
+  <a class="hidden" href="#app">К содержимому</a>
+
+  <header class="header">
+    <div class="header-inner">
+      <a class="brand" href="/" aria-label="СИС — на главную">
+        <span class="brand-mark">С</span>
+        <span>
+          <span class="brand-name">СИС</span><br>
+          <span class="brand-sub">Система Идеальных Стен</span>
+        </span>
+      </a>
+      <a class="header-phone" href="tel:+74951234567">+7 (495) 123-45-67</a>
     </div>
   </header>
 
-  <!-- ═══ HERO ═══════════════════════════════════════════ -->
-  <main>
-  <section class="lp-wrap">
-    <div class="lp-hero">
-      <div class="lp-hero__content">
-        <div class="lp-hero__eyebrow lp-reveal">Архитектурный текстиль MSD · ID System</div>
-        <h1 class="lp-hero__title lp-display lp-reveal">Стены, которые можно <span class="lp-acc">снять</span> и вернуть на&nbsp;место</h1>
-        <p class="lp-hero__sub lp-reveal">Бесшовная отделка комнаты за 1–2 дня: без штукатурки, пыли и&nbsp;трещин. Скрытый алюминиевый каркас, акустика до 40&nbsp;дБ, смена ткани без демонтажа.</p>
-        <div class="lp-hero__actions lp-reveal">
-          <a href="/calculator/" class="lp-btn lp-btn--primary">Рассчитать стоимость <span class="lp-arrow">→</span></a>
-          <a href="#system" class="lp-btn lp-btn--ghost">Как устроена система</a>
+  <main class="main" id="app">
+    <section class="hero">
+      <h1>Смета за 15 секунд</h1>
+      <p>Натяжной потолок, бесшовные стены или комплекс — честный расчёт без звонков и ожидания.</p>
+    </section>
+
+    <ol class="stepper" aria-label="Шаги калькулятора">
+      <li data-step="1" class="active"><span class="num">1</span><span class="lbl">Тип работ</span></li>
+      <li data-step="2"><span class="num">2</span><span class="lbl">Размеры</span></li>
+      <li data-step="3"><span class="num">3</span><span class="lbl">Опции</span></li>
+      <li data-step="4"><span class="num">4</span><span class="lbl">Итог</span></li>
+    </ol>
+
+    <!-- Шаг 1: тип работ -->
+    <section class="step on" id="step-type" aria-labelledby="type-title">
+      <h2 class="step-title" id="type-title">Что будем считать?</h2>
+      <p class="step-sub">Выберите один вариант — можно изменить позже.</p>
+      <div class="type-grid">
+        <button class="type-card" data-type="ceiling" type="button">
+          <span class="t-check" aria-hidden="true">✓</span>
+          <span class="t-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6v12h18V6H3zm0 5h18"/><path d="M7 14h2m4 0h2"/></svg>
+          </span>
+          <span class="t-title">Натяжной потолок</span>
+          <span class="t-sub">ПВХ или тканевый, с монтажом «под ключ».</span>
+          <span class="t-price" data-price-hint="ceiling">от 450 ₽/м²</span>
+        </button>
+        <button class="type-card" data-type="walls" type="button">
+          <span class="t-check" aria-hidden="true">✓</span>
+          <span class="t-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M4 9h16M4 15h16M9 3v6m6-6v6m-6 6v6m6-6v6"/></svg>
+          </span>
+          <span class="t-title">Бесшовные стены (СИС)</span>
+          <span class="t-sub">Архитектурный текстиль на скрытом каркасе, без грязи.</span>
+          <span class="t-price" data-price-hint="walls">от 1 900 ₽/м²</span>
+        </button>
+        <button class="type-card" data-type="combined" type="button">
+          <span class="t-check" aria-hidden="true">✓</span>
+          <span class="t-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6v12h18V6H3z"/><rect x="4" y="3" width="16" height="18" rx="2" transform="rotate(90 12 12)"/></svg>
+          </span>
+          <span class="t-title">Комплекс</span>
+          <span class="t-sub">Потолок + стены одним проектом.</span>
+          <span class="badge-12">−12%</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Шаг 2: размеры -->
+    <section class="step" id="step-size" aria-labelledby="size-title">
+      <h2 class="step-title" id="size-title">Размеры помещения</h2>
+      <p class="step-sub">Укажите примерно — точную цену зафиксируем после замера.</p>
+      <div class="grid-2">
+        <div class="field">
+          <label for="in-length">Длина, м</label>
+          <input class="input" id="in-length" type="number" inputmode="decimal" min="1" max="30" step="0.1" placeholder="4,0" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="in-width">Ширина, м</label>
+          <input class="input" id="in-width" type="number" inputmode="decimal" min="1" max="30" step="0.1" placeholder="4,0" autocomplete="off">
+        </div>
+      </div>
+      <div class="field hidden" id="field-height">
+        <label for="in-height">Высота потолка, м <span class="hint">— нужна для стен</span></label>
+        <input class="input" id="in-height" type="number" inputmode="decimal" min="2" max="6" step="0.1" placeholder="2,7" autocomplete="off">
+      </div>
+      <div class="field hidden" id="field-ceiling-type">
+        <label for="in-ceiling-type">Тип потолка</label>
+        <select class="select" id="in-ceiling-type"></select>
+      </div>
+      <div class="actions">
+        <button class="btn btn-ghost" id="btn-back-size" type="button">Назад</button>
+        <button class="btn btn-primary" id="btn-next-size" type="button">Далее</button>
+      </div>
+    </section>
+
+    <!-- Шаг 3: опции -->
+    <section class="step" id="step-opts" aria-labelledby="opts-title">
+      <h2 class="step-title" id="opts-title">Дополнительно</h2>
+      <p class="step-sub">Отмечайте то, что нужно — цена обновится сразу.</p>
+      <div class="opts" id="opts-box"></div>
+      <div class="actions">
+        <button class="btn btn-ghost" id="btn-back-opts" type="button">Назад</button>
+        <button class="btn btn-primary" id="btn-next-opts" type="button">К итогу</button>
+      </div>
+    </section>
+
+    <!-- Шаг 4: итог + заявка -->
+    <section class="step" id="step-result" aria-labelledby="result-title">
+      <h2 class="step-title" id="result-title">Ваша смета</h2>
+      <p class="step-sub">Черновой расчёт. Точную цифру менеджер зафиксирует после замера — бесплатно.</p>
+
+      <div class="result-card">
+        <div class="result-head">
+          <h2 id="result-headline">Расчёт готов</h2>
+          <span class="saving-note hidden" id="result-saving"></span>
+        </div>
+        <ul class="breakdown" id="breakdown"></ul>
+        <div class="total-row">
+          <span class="lbl">Итого</span>
+          <span class="sum" id="grand-total">—</span>
         </div>
       </div>
 
-      <div class="lp-hero__visual lp-reveal">
-        <div class="lp-board">
-          <span class="lp-board__label">Коллекция MSD · 200+ оттенков</span>
-          <div class="lp-fabric">
-            <div class="lp-fabric__swatch lp-fabric__swatch--teal"><span>Матовый</span></div>
-            <div class="lp-fabric__swatch lp-fabric__swatch--clay"><span>Терракота</span></div>
-            <div class="lp-fabric__swatch lp-fabric__swatch--ink"><span>Графит</span></div>
+      <form class="lead" id="lead-form" novalidate>
+        <h3>Получить точный расчёт</h3>
+        <p class="lead-sub">Замер бесплатно · фиксация цены · без навязчивых звонков</p>
+        <div class="grid-2">
+          <div class="field">
+            <label for="lead-name">Ваше имя</label>
+            <input class="input" id="lead-name" type="text" autocomplete="name" placeholder="Имя" maxlength="80">
           </div>
-          <span class="lp-board__tag">Полотно до 3,2 м — без единого шва</span>
+          <div class="field">
+            <label for="lead-phone">Телефон</label>
+            <input class="input" id="lead-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+7 (___) ___-__-__" maxlength="20">
+          </div>
         </div>
-        <div class="lp-hero__note">
-          <strong>32 м² за 15 минут</strong>
-          Монтаж с перекатной установкой
+        <label class="consent">
+          <input type="checkbox" id="lead-consent" checked>
+          <span>Согласен на обработку персональных данных и получение звонка по указанному номеру.</span>
+        </label>
+        <button class="btn btn-primary btn-block btn-lg" id="lead-submit" type="submit" style="margin-top:14px">Отправить заявку</button>
+        <div class="loading-line hidden" id="lead-loading"><span class="spinner"></span> Отправляем…</div>
+        <div class="lead-success hidden" id="lead-success">
+          <div class="ico">✓</div>
+          <h3>Заявка принята!</h3>
+          <p>Перезвоним в течение 15 минут в рабочее время.</p>
         </div>
-      </div>
-    </div>
-  </section>
+        <div class="error-banner hidden" id="lead-error">Не удалось отправить. <button type="button" onclick="this.closest('#lead-error').classList.add('hidden'); document.getElementById('lead-submit').classList.remove('hidden')">Ок</button></div>
+      </form>
 
-  <!-- ═══ ЦИФРЫ ══════════════════════════════════════════ -->
-  <section class="lp-stats lp-reveal">
-    <div class="lp-wrap">
-      <div class="lp-stats__grid">
-        <div class="lp-stat"><div class="lp-stat__num">3,2<em>м</em></div><div class="lp-stat__label">Бесшовная ширина полотна</div></div>
-        <div class="lp-stat"><div class="lp-stat__num">40<em>дБ</em></div><div class="lp-stat__label">Шумоизоляция в одном слое</div></div>
-        <div class="lp-stat"><div class="lp-stat__num">30<em>лет</em></div><div class="lp-stat__label">Гарантия на текстиль</div></div>
-        <div class="lp-stat"><div class="lp-stat__num">1–2<em>дня</em></div><div class="lp-stat__label">Монтаж комнаты без грязи</div></div>
+      <div class="actions" style="justify-content:center;margin-top:16px">
+        <button class="btn btn-ghost" id="btn-pdf" type="button">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+          Смета PDF
+        </button>
+        <button class="btn btn-ghost" id="btn-restart" type="button">Новый расчёт</button>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- ═══ АУДИТОРИИ ══════════════════════════════════════ -->
-  <section class="lp-section" id="segments">
-    <div class="lp-wrap">
-      <div class="lp-section__head">
-        <h2 class="lp-section__title lp-display lp-reveal">Одна система — <em>четыре</em> способа её использовать</h2>
-      </div>
-      <div class="lp-bento">
-        <div class="lp-bento__cell lp-bento__cell--span8 lp-bento__cell--light lp-reveal">
-          <span class="lp-bento__idx">01</span>
-          <div class="lp-bento__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg>
-          </div>
-          <div class="lp-bento__label">Владельцы квартир</div>
-          <p class="lp-bento__text">Ремонт за выходные без грязи и пыли: не нужно выравнивать стены, шпаклевать и ждать высыхания. Комната готова за 1–2 дня — можно заезжать сразу.</p>
-        </div>
-        <div class="lp-bento__cell lp-bento__cell--span4 lp-bento__cell--dark lp-reveal">
-          <span class="lp-bento__idx">02</span>
-          <div class="lp-bento__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6z"/></svg>
-          </div>
-          <div class="lp-bento__label">Дизайнеры интерьера</div>
-          <p class="lp-bento__text">Любая геометрия и 200+ оттенков без «мокрых» процессов. Реализация проектов быстрее на&nbsp;70%.</p>
-        </div>
-        <div class="lp-bento__cell lp-bento__cell--span4 lp-bento__cell--accent lp-reveal">
-          <span class="lp-bento__idx">03</span>
-          <div class="lp-bento__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 9h6M9 13h6"/></svg>
-          </div>
-          <div class="lp-bento__label">Застройщики</div>
-          <p class="lp-bento__text">Отделка квартир и МОП до 200 м² в день бригадой. Пожарная сертификация КМ1/КМ2, никаких «мокрых» процессов и брака.</p>
-        </div>
-        <div class="lp-bento__cell lp-bento__cell--span8 lp-bento__cell--tint lp-reveal">
-          <span class="lp-bento__idx">04</span>
-          <div class="lp-bento__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M8 21H3v-5M21 3l-7 7M3 21l7-7"/></svg>
-          </div>
-          <div class="lp-bento__label">Дилеры и монтажники</div>
-          <p class="lp-bento__text">Готовый бизнес: «Юнит» — комплект на комнату, маржа +30–50% с объекта, дистанционная Академия СИС и маркетинг от завода MSD.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══ ПОЧЕМУ СИС ═════════════════════════════════════ -->
-  <section class="lp-section lp-section--soft" id="why">
-    <div class="lp-wrap">
-      <div class="lp-split">
-        <div class="lp-split__sticky">
-          <div class="lp-section__head" style="margin-bottom:0">
-            <h2 class="lp-section__title lp-display lp-reveal">В отличие от штукатурки, обоев и&nbsp;ГКЛ</h2>
-            <p class="lp-section__sub lp-reveal">Три преимущества, которые решают главные боли ремонта: время, грязь и&nbsp;будущие трещины.</p>
-          </div>
-        </div>
-        <div class="lp-usp">
-          <div class="lp-usp__item lp-reveal">
-            <div class="lp-usp__num">УТП 01</div>
-            <div class="lp-usp__title">Скрытый каркас со съёмной лентой</div>
-            <p class="lp-usp__text">Алюминиевая система ID System полностью скрыта за полотном. Стену можно разобрать, получить доступ к проводке и собрать обратно без повреждения ткани. Конкуренты используют одноразовые клипсы.</p>
-          </div>
-          <div class="lp-usp__item lp-reveal">
-            <div class="lp-usp__num">УТП 02</div>
-            <div class="lp-usp__title">Акустика в одном слое, всего 13 мм</div>
-            <p class="lp-usp__text">Мембрана Tönlos Heavy Felt снижает шум до 40 дБ. Конкурентам нужно 10–15 см многослойной конструкции — нам достаточно 2–3 см вместе с отделкой.</p>
-          </div>
-          <div class="lp-usp__item lp-reveal">
-            <div class="lp-usp__num">УТП 03</div>
-            <div class="lp-usp__title">Чистый монтаж без демонтажа</div>
-            <p class="lp-usp__text">Никакого выравнивания, шпаклёвки и покраски. Полная отделка комнаты 20 м² за 1–2 дня, после монтажа можно сразу заезжать.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══ ТЕХНОЛОГИЯ ═════════════════════════════════════ -->
-  <section class="lp-section" id="system">
-    <div class="lp-wrap">
-      <div class="lp-section__head">
-        <div class="lp-section__kicker lp-reveal">Инженерная система</div>
-        <h2 class="lp-section__title lp-display lp-reveal">Три компонента — <em>одна</em> идеальная стена</h2>
-        <p class="lp-section__sub lp-reveal">СИС объединяет текстиль завода MSD, запатентованный каркас ID System и акустическую мембрану Tönlos.</p>
-      </div>
-      <div class="lp-comp">
-        <div class="lp-comp__card lp-reveal">
-          <div class="lp-comp__num">01</div>
-          <div class="lp-comp__title">Архитектурный текстиль MSD</div>
-          <p class="lp-comp__text">Бесшовное полотно шириной до 3,2 м. Прочнее ПВХ в 15 раз, «дышит» и не плесневеет. Идеальный матовый финиш без стыков.</p>
-          <span class="lp-comp__tag">Ширина 3,2 м · 200+ оттенков</span>
-        </div>
-        <div class="lp-comp__card lp-reveal">
-          <div class="lp-comp__num">02</div>
-          <div class="lp-comp__title">Каркас ID System</div>
-          <p class="lp-comp__text">Запатентованный алюминиевый профиль со съёмной упругой лентой. Многоразовый демонтаж, доступ к коммуникациям без переделки стены.</p>
-          <span class="lp-comp__tag">Съёмная лента · ремонтопригодность</span>
-        </div>
-        <div class="lp-comp__card lp-reveal">
-          <div class="lp-comp__num">03</div>
-          <div class="lp-comp__title">Акустика Tönlos Heavy Felt</div>
-          <p class="lp-comp__text">Мембрана толщиной 13 мм убирает эхо и шум соседей. Сертификация КМ1/КМ2, SanPin, SGS — можно в жилые и коммерческие объекты.</p>
-          <span class="lp-comp__tag">До 40 дБ · слой 13 мм</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══ СРАВНЕНИЕ ══════════════════════════════════════ -->
-  <section class="lp-section lp-section--soft" id="compare">
-    <div class="lp-wrap">
-      <div class="lp-section__head">
-        <h2 class="lp-section__title lp-display lp-reveal">Классическая отделка <em>или</em> СИС</h2>
-      </div>
-      <div class="lp-compare">
-        <div class="lp-compare__row lp-reveal">
-          <div class="lp-compare__old"><strong>Штукатурка + покраска</strong>Грязно, долго, трещины. 3–6 месяцев ремонта.</div>
-          <div class="lp-compare__arrow"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
-          <div class="lp-compare__new"><strong>СИС</strong><p>Сухой монтаж за 1–2 дня без грязи и выравнивания. Бесшовный матовый финиш без трещин.</p></div>
-        </div>
-        <div class="lp-compare__row lp-reveal">
-          <div class="lp-compare__old"><strong>Обои</strong>Швы, недолговечность, нет акустики. Обновление — снова ремонт.</div>
-          <div class="lp-compare__arrow"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
-          <div class="lp-compare__new"><strong>СИС</strong><p>Полотно до 3,2 м без единого шва, гарантия 30 лет. Смена цвета — без замены каркаса.</p></div>
-        </div>
-        <div class="lp-compare__row lp-reveal">
-          <div class="lp-compare__old"><strong>ГКЛ + шпаклёвка</strong>Пыль, швы, покраска. Многослойная конструкция для шумоизоляции.</div>
-          <div class="lp-compare__arrow"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
-          <div class="lp-compare__new"><strong>СИС</strong><p>Акустика до 40 дБ в слое 13 мм вместо 10–15 см конструкции. Без мокрых процессов.</p></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══ ПРОЦЕСС ═════════════════════════════════════════ -->
-  <section class="lp-section" id="process">
-    <div class="lp-wrap">
-      <div class="lp-section__head">
-        <h2 class="lp-section__title lp-display lp-reveal">От заявки до идеальной стены</h2>
-      </div>
-      <div class="lp-process">
-        <div class="lp-process__step lp-reveal">
-          <div class="lp-process__num">01</div>
-          <div class="lp-process__title">Заявка</div>
-          <p class="lp-process__text">Через калькулятор, чат или по телефону. Фиксируем объём за 15 минут.</p>
-        </div>
-        <div class="lp-process__step lp-reveal">
-          <div class="lp-process__num">02</div>
-          <div class="lp-process__title">Бесплатный замер</div>
-          <p class="lp-process__text">Замерщик приезжает на следующий день, точные размеры стен и проёмов.</p>
-        </div>
-        <div class="lp-process__step lp-reveal">
-          <div class="lp-process__num">03</div>
-          <div class="lp-process__title">Смета за 24 часа</div>
-          <p class="lp-process__text">Фиксированная цена без сюрпризов: текстиль, каркас, монтаж и опции.</p>
-        </div>
-        <div class="lp-process__step lp-reveal">
-          <div class="lp-process__num">04</div>
-          <div class="lp-process__title">Монтаж 1–2 дня</div>
-          <p class="lp-process__text">Чистая установка с перекатной установкой. Гарантия 30 лет на текстиль.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══ ЦЕНЫ ═════════════════════════════════════════════ -->
-  <section class="lp-section" id="pricing">
-    <div class="lp-wrap">
-      <div class="lp-section__head">
-        <div class="lp-section__kicker lp-reveal">Прайс</div>
-        <h2 class="lp-section__title lp-display lp-reveal">Прозрачные цены <em>за квадратный метр</em></h2>
-        <p class="lp-section__sub lp-reveal">Розничная цена с установкой. Точная смета — после бесплатного замера, фиксируется на 24 часа расчёта.</p>
-      </div>
-      <div class="lp-pricing">
-        <div class="lp-price lp-reveal">
-          <div class="lp-price__name">Эконом</div>
-          <div class="lp-price__desc">Текстиль MSD + каркас ID System</div>
-          <div class="lp-price__amount">от 2 990 ₽<small>/м²</small></div>
-          <div class="lp-price__note">с установкой</div>
-          <ul class="lp-price__list">
-            <li>Бесшовное полотно до 3,2 м</li>
-            <li>Скрытый алюминиевый каркас</li>
-            <li>Съёмная лента, доступ к проводке</li>
-            <li>Сухой монтаж без грязи</li>
-          </ul>
-          <a href="/calculator/" class="lp-btn lp-btn--ghost">Рассчитать <span class="lp-arrow">→</span></a>
-        </div>
-        <div class="lp-price lp-price--featured lp-reveal">
-          <span class="lp-price__flag">Выбор 80% клиентов</span>
-          <div class="lp-price__name">Стандарт</div>
-          <div class="lp-price__desc">+ мембрана Tönlos Heavy Felt</div>
-          <div class="lp-price__amount">от 3 590 ₽<small>/м²</small></div>
-          <div class="lp-price__note">с установкой и шумоизоляцией</div>
-          <ul class="lp-price__list">
-            <li>Всё из тарифа «Эконом»</li>
-            <li>Акустика до 40 дБ в слое 13 мм</li>
-            <li>Убирает эхо и шум соседей</li>
-            <li>Сертификация КМ1/КМ2, SanPin</li>
-          </ul>
-          <a href="/calculator/" class="lp-btn lp-btn--primary">Рассчитать <span class="lp-arrow">→</span></a>
-        </div>
-        <div class="lp-price lp-reveal">
-          <div class="lp-price__name">Премиум</div>
-          <div class="lp-price__desc">Текстиль люкс + утеплитель</div>
-          <div class="lp-price__amount">от 4 590 ₽<small>/м²</small></div>
-          <div class="lp-price__note">с установкой и термоизоляцией</div>
-          <ul class="lp-price__list">
-            <li>Всё из тарифа «Стандарт»</li>
-            <li>Текстиль коллекции «Люкс»</li>
-            <li>Дополнительный утеплитель</li>
-            <li>Приоритетный монтаж 1 день</li>
-          </ul>
-          <a href="/calculator/" class="lp-btn lp-btn--ghost">Рассчитать <span class="lp-arrow">→</span></a>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══ CTA ═════════════════════════════════════════════ -->
-  <section class="lp-section" style="padding-top:0">
-    <div class="lp-wrap">
-      <div class="lp-section--dark lp-cta lp-reveal">
-        <h2 class="lp-cta__title lp-display">Рассчитайте свой проект за 15 секунд</h2>
-        <p class="lp-cta__sub">Укажите размеры комнаты в калькуляторе и получите смету онлайн — потолки, стены или комплекс.</p>
-        <div class="lp-cta__actions">
-          <a href="/calculator/" class="lp-btn lp-btn--dark">Рассчитать стоимость <span class="lp-arrow">→</span></a>
-          <a href="/qr.html" class="lp-btn lp-btn--ghost" style="border-color:var(--lp-dark-line);color:#F2EFE7">Обзор платформы</a>
-        </div>
-        <p class="lp-cta__meta">Потолки Party · Флюкс · Система Идеальных Стен · Академия СИС</p>
-      </div>
-    </div>
-  </section>
+    <div class="loading-line hidden" id="calc-loading" style="margin-top:20px"><span class="spinner"></span> Считаем…</div>
+    <div class="error-banner hidden" id="calc-error">Что-то пошло не так. <button type="button" onclick="window.CalcApp && CalcApp.recalc()">Повторить</button></div>
   </main>
 
-  <!-- ═══ ФУТЕР ═══════════════════════════════════════════ -->
-  <footer class="lp-footer">
-    <div class="lp-wrap lp-footer__inner">
-      <span class="lp-brand" style="font-size:15px">СИС <em>· идеальные стены</em></span>
-      <nav class="lp-footer__nav" aria-label="Навигация футера">
-        <a href="/calculator/">Калькулятор</a>
-        <a href="/client.html">Личный кабинет</a>
-        <a href="/manager.html">Менеджер</a>
-        <a href="/qr.html">Потолок Party 2026</a>
-      </nav>
-      <div class="lp-footer__copy">© 2026 Флюкс · ГК «ИКС» — официальный представитель завода MSD</div>
-    </div>
+  <footer class="footer">
+    <span class="f-brand">СИС</span> · Система Идеальных Стен · <a href="tel:+74951234567">+7 (495) 123-45-67</a>
   </footer>
 
-  <script src="/js/ux.js"></script>
-  <script src="/js/widget.js"></script>
-  <script>
-    (function () {
-      if (!('IntersectionObserver' in window)) { document.querySelectorAll('.lp-reveal').forEach(el => el.classList.add('lp-visible')); return; }
-      const io = new IntersectionObserver((entries) => {
-        entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('lp-visible'); io.unobserve(e.target); } });
-      }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
-      document.querySelectorAll('.lp-reveal').forEach(el => io.observe(el));
-    })();
-  </script>
+  <div class="sticky-bar" id="sticky">
+    <div class="sticky-inner">
+      <div class="sticky-total">
+        <span class="s-lbl">Итого</span>
+        <span class="s-sum" id="sticky-sum">—</span>
+        <span class="sticky-saving hidden" id="sticky-saving"></span>
+      </div>
+      <div class="sticky-actions">
+        <button class="btn btn-ghost" id="sticky-pdf" type="button" title="Скачать смету PDF">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+          <span class="lbl-pdf">PDF</span>
+        </button>
+        <button class="btn btn-primary" id="sticky-cta" type="button">Оставить заявку</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="/js/calculator-app.js" defer></script>
 </body>
 </html>

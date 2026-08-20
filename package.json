@@ -1,7 +1,7 @@
 {
   "name": "potolok-ai",
   "version": "1.0.0",
-  "description": "ИИ-помощник для потолочной компании: чат-бот, калькулятор, заявки",
+  "description": "СИС — калькулятор смет натяжных потолков и бесшовных стен",
   "main": "server/index.js",
   "engines": {
     "node": ">=22.5.0"
@@ -9,8 +9,6 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "seed": "node scripts/seed-demo.js",
-    "demo": "node scripts/seed-demo.js && node server/index.js",
     "test": "node tests/run.js"
   },
   "dependencies": {
@@ -23,5 +21,8 @@
     "openai": "^4.40.0",
     "pdf-parse": "^2.4.5",
     "pdfkit": "^0.19.1"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1"
   }
 }
