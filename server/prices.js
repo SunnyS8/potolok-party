@@ -1,7 +1,11 @@
 const fs = require('fs');
 const path = require('path');
 
-const dataDir = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
+const dataDir = process.env.DATA_DIR
+  ? process.env.DATA_DIR
+  : process.env.VERCEL === '1'
+    ? '/tmp/potolok-data'
+    : path.join(__dirname, '..', 'data');
 const file = path.join(dataDir, 'prices.json');
 
 const defaults = {

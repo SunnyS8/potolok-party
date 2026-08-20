@@ -39,12 +39,25 @@ npm test
 
 Проверяют расчётные API (потолок/стены/комплекс), заявку, PDF и полный сценарий фронтенда в jsdom (выбор типа, размеры, опции, итог, PDF, отправка заявки).
 
-## Деплой на Render
+## Деплой на Vercel
+
+1. Залить код на GitHub
+2. [vercel.com](https://vercel.com) → **Add New → Project** → Import из GitHub → выбрать репозиторий
+3. Фреймворк — **Other** (конфиг в `vercel.json` уже есть)
+4. В настройках проекта (Settings → Environment Variables) добавить:
+   - `HUBRIS_API_KEY` (или `OPENAI_API_KEY`)
+   - `HUBRIS_MODEL` (не `hubris/free`)
+   - `NOTIFY_EMAIL` — для уведомлений о заявках
+5. **Deploy**
+
+> ⚠️ Vercel — serverless: данные (лиды, правки цен) хранятся в эфемерном `/tmp` и теряются при холодных стартах. Для персистентности подключите управляемую БД (Neon/Turso/Vercel Postgres) или используйте Render (persistent disk `/var/data`, конфиг в `render.yaml`).
+
+## Альтернатива: Render
 
 1. Залить код на GitHub
 2. render.com → New → Blueprint → выбрать репозиторий (используется `render.yaml`)
-3. Тариф `starter` — persistent disk `/var/data` (данные не теряются при перезапуске)
-4. В секретах: `HUBRIS_API_KEY`, `HUBRIS_MODEL` (или `OPENAI_API_KEY`), `NOTIFY_EMAIL`
+3. Тариф `starter` — persistent disk `/var/data`
+4. В секретах: `HUBRIS_API_KEY`, `HUBRIS_MODEL`, `NOTIFY_EMAIL`
 5. Deploy
 
 ## Переменные окружения
