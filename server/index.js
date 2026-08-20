@@ -144,6 +144,25 @@ app.get('/api/lead-plan/:id', (req, res) => {
   }
 });
 
+app.post('/api/plan/analyze', apiLimiter, async (req, res) => {
+  try {
+    const image = req.body && req.body.image;
+    if (!image || typeof image !== 'string' || !/^data:image\/(png|jpeg|webp|gif);base64,/.test(image)) {
+      return res.status(400).json({ error: 'no image' });
+    }
+    const type = req.body.type === 'walls' ? 'walls' : req.body.type === 'combined' ? 'combined' : 'ceiling';
+    const result = await ai.analyzePlan(image, { type });
+    if (!result.ok) {
+      const status = result.error === 'AI_NOT_CONFIGURED' ? 503 : 502;
+      return res.status(status).json({ error: result.error });
+    }
+    res.json(result.data);
+  } catch (err) {
+    console.error('plan/analyze error:', err.message);
+    res.status(500).json({ error: 'AI_ERROR' });
+  }
+});
+
 app.post('/api/calculator', async (req, res) => {
   try {
     const { ceilingType, area, options, clientName, clientPhone, skipAI, source } = req.body;

@@ -226,6 +226,79 @@ async function calculatePrice(ceilingType, area, options) {
   }
 }
 
+function buildPlanPrompt(ctx) {
+  const typeLabel = ctx && ctx.type === 'walls' ? 'стены' : ctx && ctx.type === 'combined' ? 'потолки и стены' : 'потолок';
+  return `Ты определяешь размеры комнаты по плану (чертёж или фото плана помещения) для расчёта ${typeLabel}.
+
+Найди на плане размерные линии и подписи размеров (в метрах или миллиметрах). Если есть масштабная линейка — используй её. Если точных размеров нет — оцени пропорции комнаты и верни правдоподобные значения, но confidence: "low".
+
+Верни ТОЛЬКО валидный JSON без пояснений и без Markdown, в формате:
+{"len": 5.2, "wid": 4.1, "hgt": 2.7, "rooms": 1, "confidence": "high", "notes": "краткое пояснение на русском"}
+
+Правила:
+- len — длина комнаты в метрах (больший габарит)
+- wid — ширина комнаты в метрах (меньший габарит)
+- hgt — высота потолка в метрах; если на плане не указана — 2.7
+- rooms — количество комнат на плане
+- confidence — "high", если размеры подписаны на плане; "low", если это оценка по пропорциям
+- notes — что именно видно на плане, до 200 символов, на русском
+
+Если по картинке вообще невозможно определить размеры — верни {"error": "описание причины"}.`;
+}
+
+function parsePlanJson(text) {
+  if (!text) return null;
+  let t = String(text).trim();
+  t = t.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+  const start = t.indexOf('{');
+  const end = t.lastIndexOf('}');
+  if (start === -1 || end <= start) return null;
+  try {
+    return JSON.parse(t.slice(start, end + 1));
+  } catch (err) {
+    const num = (k) => { const m = t.match(new RegExp('"' + k + '"\\s*:\\s*([\\d.]+)')); return m ? parseFloat(m[1]) : null; };
+    const data = { len: num('len'), wid: num('wid'), hgt: num('hgt'), rooms: num('rooms'), confidence: /"confidence"\s*:\s*"(high|low)"/.test(t) ? RegExp.$1 : 'low', notes: '' };
+    if (data.len || data.wid) return data;
+    return null;
+  }
+}
+
+async function analyzePlan(imageDataUrl, ctx) {
+  if (process.env.PLAN_ANALYZE_MOCK === '1') {
+    return { ok: true, data: { len: 5, wid: 4, hgt: 2.7, rooms: 1, confidence: 'high', notes: 'тестовая заглушка' } };
+  }
+  const ai = getClient();
+  if (!ai) return { ok: false, error: 'AI_NOT_CONFIGURED' };
+  const model = getActiveModel();
+  try {
+    const response = await ai.chat.completions.create({
+      model,
+      messages: [
+        { role: 'system', content: buildPlanPrompt(ctx) },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Вот план комнаты. Определи размеры и верни JSON.' },
+            { type: 'image_url', image_url: { url: imageDataUrl } },
+          ],
+        },
+      ],
+      max_tokens: 400,
+      temperature: 0.2,
+      response_format: { type: 'json_object' },
+    });
+    const text = response.choices[0].message.content;
+    const data = parsePlanJson(text);
+    if (data && data.error) return { ok: false, error: String(data.error).slice(0, 200) };
+    if (!data || !(data.len > 0) || !(data.wid > 0)) return { ok: false, error: 'BAD_JSON' };
+    return { ok: true, data };
+  } catch (err) {
+    console.error('Plan analyze error [' + model + ']:', err.status, err.message);
+    if (useHubris() && isBalanceError(err)) lowBalance = true;
+    return { ok: false, error: 'AI_ERROR' };
+  }
+}
+
 function fallbackChatResponse(messages, extraContext) {
   const lastMsg = messages[messages.length - 1]?.content?.toLowerCase() || '';
 
@@ -307,4 +380,4 @@ function fallbackCalcResponse(ceilingType, area, options) {
 
 function getLowBalance() { return lowBalance; }
 
-module.exports = { chat, calculatePrice, getModel: getActiveModel, getProviderName, getLowBalance, tryCompletion, getClient };
+module.exports = { chat, calculatePrice, getModel: getActiveModel, getProviderName, getLowBalance, tryCompletion, getClient, analyzePlan };

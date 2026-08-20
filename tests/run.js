@@ -36,7 +36,7 @@ async function startServer() {
   const out = fs.openSync(path.join(TMPDIR, 'server.log'), 'a');
   server = spawn('node', ['server/index.js'], {
     cwd: ROOT,
-    env: { ...process.env, PORT: String(PORT), DATA_DIR: TMPDIR },
+    env: { ...process.env, PORT: String(PORT), DATA_DIR: TMPDIR, PLAN_ANALYZE_MOCK: '1' },
     stdio: ['ignore', out, out],
   });
   for (let i = 0; i < 60; i++) {
@@ -132,6 +132,13 @@ async function stopServer() {
   const planImg = await api('GET', '/api/lead-plan/' + planLead.data.id);
   check('lead-plan 200 image/png', planImg.status === 200 && planImg.contentType.includes('image/png'));
 
+  console.log('\n— /api/plan/analyze (расчёт по плану) —');
+  const analyze = await api('POST', '/api/plan/analyze', { image: tinyPng, type: 'combined' });
+  check('plan/analyze 200', analyze.status === 200);
+  check('plan/analyze: размеры из плана', analyze.data && analyze.data.len === 5 && analyze.data.wid === 4 && analyze.data.hgt === 2.7 && analyze.data.confidence === 'high');
+  const analyzeBad = await api('POST', '/api/plan/analyze', { image: 'not-an-image' });
+  check('plan/analyze без картинки -> 400', analyzeBad.status === 400);
+
   console.log('\n— /api/export/pdf —');
   const pdf = await api('POST', '/api/export/pdf', { title: 'Смета', items: [{ name: 'Полотно', quantity: 20, unit: 'м²', unitPrice: 600, total: 12000 }], grandTotal: 12000 });
   check('pdf 200', pdf.status === 200);
@@ -222,6 +229,16 @@ async function frontendTests(check) {
   check('итог потолка совпадает с API', numOf($q('#grand-total').textContent) === Math.round(cRes.estimate.total), `ui=${$q('#grand-total').textContent} api=${cRes.estimate.total}`);
   check('разбивка потолка непустая', $all('#breakdown li').length >= 3);
   check('sticky-бар показан', $q('#sticky').classList.contains('show'));
+
+  /* ── Расчёт по плану (мок ИИ) ── */
+  win.CalcApp.__state.planDataUrl = 'data:image/png;base64,' + 'x'.repeat(64);
+  setVal('#in-length', '');
+  setVal('#in-width', '');
+  $q('#btn-plan-calc').click();
+  const dimsFilled = await waitFor(() => $q('#in-length').value === '5' && $q('#in-width').value === '4', 6000);
+  check('план: размеры подставлены из анализа', dimsFilled, `len=${$q('#in-length').value} wid=${$q('#in-width').value}`);
+  const planReCalc = await waitFor(() => numOf($q('#grand-total').textContent) === Math.round(cRes.estimate.total), 6000);
+  check('план: пересчитано и показан итог', planReCalc);
 
   click('#btn-pdf');
   check('PDF-кнопка формирует файл', await waitFor(() => win.__downloaded === 'smeta.pdf', 6000));

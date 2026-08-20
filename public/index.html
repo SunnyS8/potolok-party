@@ -104,6 +104,21 @@
         <label for="in-ceiling-type">Тип потолка</label>
         <select class="select" id="in-ceiling-type"></select>
       </div>
+      <div class="plan-upload">
+        <label class="plan-drop" id="plan-drop" for="plan-calc-file">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l4-4m-4 4l-4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+          <span><b>Рассчитать по плану комнаты</b> <em>Загрузите чертёж или фото плана — подставим размеры автоматически</em></span>
+          <input type="file" id="plan-calc-file" accept="image/png,image/jpeg,image/webp" hidden>
+        </label>
+        <div class="plan-preview hidden" id="plan-preview">
+          <img id="plan-preview-img" alt="План комнаты">
+          <button class="plan-remove" id="plan-remove" type="button">Убрать</button>
+          <div class="plan-calc-actions">
+            <button class="btn btn-primary" id="btn-plan-calc" type="button">Рассчитать по плану</button>
+            <div class="loading-line hidden" id="plan-loading"><span class="spinner"></span> Анализируем план…</div>
+          </div>
+        </div>
+      </div>
       <div class="actions">
         <button class="btn btn-ghost" id="btn-back-size" type="button">Назад</button>
         <button class="btn btn-primary" id="btn-next-size" type="button">Далее</button>
@@ -149,17 +164,6 @@
           <div class="field">
             <label for="lead-phone">Телефон</label>
             <input class="input" id="lead-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+7 (___) ___-__-__" maxlength="20">
-          </div>
-        </div>
-        <div class="plan-upload">
-          <label class="plan-drop" id="plan-drop" for="lead-plan">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l4-4m-4 4l-4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
-            <span><b>Прикрепить план комнаты</b> <em>PNG, JPG до 5 МБ · необязательно</em></span>
-            <input type="file" id="lead-plan" accept="image/png,image/jpeg,image/webp" hidden>
-          </label>
-          <div class="plan-preview hidden" id="plan-preview">
-            <img id="plan-preview-img" alt="План комнаты">
-            <button class="plan-remove" id="plan-remove" type="button">Убрать</button>
           </div>
         </div>
         <label class="consent">

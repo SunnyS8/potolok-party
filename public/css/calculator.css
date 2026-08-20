@@ -411,6 +411,9 @@ body.no-scroll { overflow: hidden; }
   font-size: 12px; font-weight: 600;
 }
 .plan-remove:hover { background: var(--error); }
+.plan-calc-actions { padding: 14px 16px; display: grid; gap: 10px; background: var(--surface); }
+.plan-calc-actions .btn { width: 100%; }
+.plan-calc-actions .loading-line { justify-content: center; }
 
 /* ─── Личный кабинет ─── */
 .account {

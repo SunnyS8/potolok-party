@@ -36,7 +36,7 @@
     'calc-loading', 'calc-error', 'sticky', 'toast',
     'btn-account', 'account', 'account-close', 'account-form', 'account-phone', 'account-go',
     'account-err', 'account-loading', 'account-list',
-    'lead-plan', 'plan-drop', 'plan-preview', 'plan-preview-img', 'plan-remove',
+    'plan-calc-file', 'plan-drop', 'plan-preview', 'plan-preview-img', 'plan-remove', 'btn-plan-calc', 'plan-loading',
   ];
   function cacheEls() { IDS.forEach(id => els[id] = document.getElementById(id)); }
 
@@ -465,16 +465,57 @@
 
   function handlePlanFile(file) {
     if (!file) return;
-    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) { toast('Поддерживаются PNG, JPG, WEBP', true); els['lead-plan'].value = ''; return; }
-    if (file.size > 5 * 1024 * 1024) { toast('Файл больше 5 МБ', true); els['lead-plan'].value = ''; return; }
+    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) { toast('Поддерживаются PNG, JPG, WEBP', true); els['plan-calc-file'].value = ''; return; }
+    if (file.size > 5 * 1024 * 1024) { toast('Файл больше 5 МБ', true); els['plan-calc-file'].value = ''; return; }
     const rd = new FileReader();
     rd.onload = () => compressImage(rd.result, (dataUrl) => {
       state.planDataUrl = dataUrl;
       els['plan-preview-img'].src = dataUrl;
       els['plan-drop'].classList.add('hidden');
       els['plan-preview'].classList.remove('hidden');
+      toast('План загружен. Нажмите «Рассчитать по плану»');
     });
     rd.readAsDataURL(file);
+  }
+
+  async function calcByPlan() {
+    if (!state.planDataUrl) { toast('Сначала загрузите план', true); return; }
+    const btn = els['btn-plan-calc'];
+    btn.disabled = true;
+    els['plan-loading'].classList.remove('hidden');
+    try {
+      const r = await fetch('/api/plan/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: state.planDataUrl, type: state.type || 'ceiling' }),
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      if (!d || !(parseFloat(d.len) > 0) || !(parseFloat(d.wid) > 0)) {
+        toast('Не удалось распознать размеры из плана', true);
+        return;
+      }
+      const set = (id, v) => {
+        const el = document.getElementById(id);
+        if (el) el.value = String(v).replace('.', ',');
+      };
+      set('in-length', d.len);
+      set('in-width', d.wid);
+      if (parseFloat(d.hgt) > 0 && !els['field-height'].classList.contains('hidden')) set('in-height', d.hgt);
+      toast(d.confidence === 'low'
+        ? 'Размеры оценены из плана — проверьте их в полях'
+        : 'Размеры подставлены из плана');
+      state.result = null;
+      state.lastPayload = null;
+      renderSticky(false);
+      recalc();
+      showStep(4);
+    } catch (err) {
+      toast('Не удалось рассчитать по плану. Введите размеры вручную', true);
+    } finally {
+      btn.disabled = false;
+      els['plan-loading'].classList.add('hidden');
+    }
   }
 
   /* ─── Личный кабинет ─── */
@@ -611,7 +652,7 @@
     state.planDataUrl = null;
     els['plan-preview'].classList.add('hidden');
     els['plan-drop'].classList.remove('hidden');
-    els['lead-plan'].value = '';
+    els['plan-calc-file'].value = '';
     Object.keys(state.opts).forEach(k => state.opts[k] = (k === 'chandelier' || k === 'soundproof') ? false : 0);
     ['in-length', 'in-width', 'in-height'].forEach(id => document.getElementById(id).value = '');
     els['lead-form'].classList.remove('hidden');
@@ -699,10 +740,11 @@
     els['btn-restart'].addEventListener('click', resetAll);
     els['lead-form'].addEventListener('submit', submitLead);
 
-    els['lead-plan'].addEventListener('change', () => handlePlanFile(els['lead-plan'].files && els['lead-plan'].files[0]));
+    els['plan-calc-file'].addEventListener('change', () => handlePlanFile(els['plan-calc-file'].files && els['plan-calc-file'].files[0]));
+    els['btn-plan-calc'].addEventListener('click', calcByPlan);
     els['plan-remove'].addEventListener('click', () => {
       state.planDataUrl = null;
-      els['lead-plan'].value = '';
+      els['plan-calc-file'].value = '';
       els['plan-preview'].classList.add('hidden');
       els['plan-drop'].classList.remove('hidden');
     });
@@ -737,6 +779,6 @@
     });
   }
 
-  window.CalcApp = { recalc, resetAll };
+  window.CalcApp = { recalc, resetAll, calcByPlan, __state: state };
   document.addEventListener('DOMContentLoaded', init);
 })();
