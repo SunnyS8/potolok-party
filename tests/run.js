@@ -112,6 +112,8 @@ async function stopServer() {
   check('pdf application/pdf', pdf.contentType.includes('application/pdf'));
   const magic = Buffer.from(pdf.data).slice(0, 5).toString('latin1');
   check('pdf магия %PDF-', magic === '%PDF-', `magic=${magic}`);
+  const pdfLatin = Buffer.from(pdf.data).toString('latin1');
+  check('pdf кириллица (DejaVu встроен)', /DejaVuSans/.test(pdfLatin));
 
   console.log('\n— Фронтенд (jsdom, полный сценарий) —');
   await frontendTests(check);

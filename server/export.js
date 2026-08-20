@@ -1,12 +1,17 @@
 const PDFDocument = require('pdfkit');
 const ExcelJS = require('exceljs');
+const path = require('path');
+
+const FONT_REGULAR = path.join(__dirname, '..', 'assets', 'fonts', 'DejaVuSans.ttf');
+const FONT_BOLD = path.join(__dirname, '..', 'assets', 'fonts', 'DejaVuSans-Bold.ttf');
 
 function round2(v) { return Math.round(v * 100) / 100; }
 
 function generateWallPdf(project, calcResult) {
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({ size: 'A4', margin: 40, font: 'Helvetica' });
+      const doc = new PDFDocument({ size: 'A4', margin: 40 });
+      doc.font(FONT_REGULAR);
       const chunks = [];
       doc.on('data', c => chunks.push(c));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -28,8 +33,8 @@ function generateWallPdf(project, calcResult) {
       doc.moveDown(0.5);
 
       // Summary
-      doc.fontSize(13).font('Helvetica-Bold').text('Сводка');
-      doc.fontSize(10).font('Helvetica');
+      doc.fontSize(13).font(FONT_BOLD).text('Сводка');
+      doc.fontSize(10).font(FONT_REGULAR);
       const summaryLines = [
         'Стен: ' + s.wallCount,
         'Общая площадь стен: ' + s.totalWallArea.toFixed(2) + ' м²',
@@ -43,8 +48,8 @@ function generateWallPdf(project, calcResult) {
       doc.moveDown(0.8);
 
       // Pricing
-      doc.fontSize(13).font('Helvetica-Bold').text('Смета');
-      doc.fontSize(10).font('Helvetica');
+      doc.fontSize(13).font(FONT_BOLD).text('Смета');
+      doc.fontSize(10).font(FONT_REGULAR);
       const total = isCompany ? p.totalCompany : p.totalClient;
       const matTotal = isCompany ? p.materialCostCompany : p.materialCostClient;
       const instTotal = isCompany ? p.installCostCompany : p.installCostClient;
@@ -59,8 +64,8 @@ function generateWallPdf(project, calcResult) {
       doc.moveDown(0.8);
 
       // BOM
-      doc.fontSize(13).font('Helvetica-Bold').text('Спецификация (BOM)');
-      doc.fontSize(10).font('Helvetica');
+      doc.fontSize(13).font(FONT_BOLD).text('Спецификация (BOM)');
+      doc.fontSize(10).font(FONT_REGULAR);
       doc.moveDown(0.3);
 
       // Table header
@@ -68,10 +73,10 @@ function generateWallPdf(project, calcResult) {
       const bomCols = [200, 60, 60, 100, 100];
       const bomHeaders = ['Материал', 'Кол-во', 'Ед.', 'Цена', 'Сумма'];
       let bx = bomLeft;
-      doc.font('Helvetica-Bold').fontSize(9);
+      doc.font(FONT_BOLD).fontSize(9);
       bomHeaders.forEach((h, i) => { doc.text(h, bx, doc.y, { width: bomCols[i], align: i === 0 ? 'left' : 'right' }); bx += bomCols[i]; });
       doc.moveDown(0.3);
-      doc.font('Helvetica').fontSize(9);
+      doc.font(FONT_REGULAR).fontSize(9);
 
       calcResult.bom.forEach(m => {
         bx = bomLeft;
@@ -85,12 +90,12 @@ function generateWallPdf(project, calcResult) {
       doc.moveDown(0.5);
 
       // Per-wall breakdown
-      doc.fontSize(13).font('Helvetica-Bold').text('Раскладка по стенам');
-      doc.fontSize(9).font('Helvetica');
+      doc.fontSize(13).font(FONT_BOLD).text('Раскладка по стенам');
+      doc.fontSize(9).font(FONT_REGULAR);
       doc.moveDown(0.3);
       calcResult.walls.forEach(w => {
-        doc.font('Helvetica-Bold').fontSize(10).text('Стена ' + (w.index + 1) + ' — ' + w.width.toFixed(2) + 'x' + w.height.toFixed(2) + ' м');
-        doc.font('Helvetica').fontSize(9);
+        doc.font(FONT_BOLD).fontSize(10).text('Стена ' + (w.index + 1) + ' — ' + w.width.toFixed(2) + 'x' + w.height.toFixed(2) + ' м');
+        doc.font(FONT_REGULAR).fontSize(9);
         const wallTotal = isCompany ? w.wallTotalCompany : w.wallTotalClient;
         doc.text('  Площадь: ' + w.wallArea.toFixed(2) + ' м²  |  Проёмы: ' + w.openingArea.toFixed(2) + ' м²  |  Чистая: ' + w.netArea.toFixed(2) + ' м²  |  Сумма: ' + wallTotal.toLocaleString() + ' ₽');
         doc.moveDown(0.3);
@@ -217,7 +222,8 @@ function money(v) {
 function generateEstimatePdf({ title, items, grandTotal, upgradesTotal = 0, discountLabel, discountSavings = 0 }) {
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({ size: 'A4', margin: 40, font: 'Helvetica' });
+      const doc = new PDFDocument({ size: 'A4', margin: 40 });
+      doc.font(FONT_REGULAR);
       const chunks = [];
       doc.on('data', c => chunks.push(c));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -234,9 +240,9 @@ function generateEstimatePdf({ title, items, grandTotal, upgradesTotal = 0, disc
       doc.moveTo(40, doc.y).lineTo(520, doc.y).stroke('#ddd');
       doc.moveDown(0.6);
 
-      doc.fontSize(12).font('Helvetica-Bold').text('Состав сметы');
+      doc.fontSize(12).font(FONT_BOLD).text('Состав сметы');
       doc.moveDown(0.4);
-      doc.font('Helvetica');
+      doc.font(FONT_REGULAR);
 
       const startY = doc.y;
       const rows = Array.isArray(items) ? items.filter(i => i.total > 0) : [];
@@ -245,8 +251,8 @@ function generateEstimatePdf({ title, items, grandTotal, upgradesTotal = 0, disc
         const qty = typeof row.quantity === 'number' ? row.quantity.toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + ' ' + (row.unit || '') : '—';
         doc.fontSize(10).text(name, 50, doc.y, { width: 250 });
         doc.text(qty, 300, doc.y, { width: 90, align: 'right' });
-        doc.font('Helvetica-Bold').text(money(row.total), 390, doc.y - 12, { width: 130, align: 'right' });
-        doc.font('Helvetica');
+        doc.font(FONT_BOLD).text(money(row.total), 390, doc.y - 12, { width: 130, align: 'right' });
+        doc.font(FONT_REGULAR);
         doc.moveDown(0.35);
       });
       doc.moveTo(40, startY + rows.length * 15.5 + 5).lineTo(520, startY + rows.length * 15.5 + 5).stroke('#eee');
@@ -254,21 +260,21 @@ function generateEstimatePdf({ title, items, grandTotal, upgradesTotal = 0, disc
 
       if (discountLabel && discountSavings > 0) {
         doc.fontSize(11).text(discountLabel, { width: 350 });
-        doc.font('Helvetica-Bold').fillColor('#0a7a3d').text('–' + money(discountSavings), { align: 'right' });
-        doc.font('Helvetica').fillColor('#000');
+        doc.font(FONT_BOLD).fillColor('#0a7a3d').text('–' + money(discountSavings), { align: 'right' });
+        doc.font(FONT_REGULAR).fillColor('#000');
       }
 
       if (upgradesTotal > 0) {
         doc.fontSize(11).text('Дополнительные услуги', { width: 350 });
-        doc.font('Helvetica-Bold').text(money(upgradesTotal), { align: 'right' });
-        doc.font('Helvetica');
+        doc.font(FONT_BOLD).text(money(upgradesTotal), { align: 'right' });
+        doc.font(FONT_REGULAR);
       }
 
       doc.moveDown(0.6);
       doc.moveTo(40, doc.y).lineTo(520, doc.y).stroke('#ddd');
       doc.moveDown(0.6);
-      doc.fontSize(14).font('Helvetica-Bold').text('Итого: ' + money(grandTotal), { align: 'right' });
-      doc.font('Helvetica');
+      doc.fontSize(14).font(FONT_BOLD).text('Итого: ' + money(grandTotal), { align: 'right' });
+      doc.font(FONT_REGULAR);
 
       doc.moveDown(1.5);
       doc.fontSize(9).fillColor('#888').text('Смета носит предварительный характер. Точная стоимость после замера.', { align: 'center' });
