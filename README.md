@@ -46,7 +46,8 @@ npm test
 3. Фреймворк — **Other** (конфиг в `vercel.json` уже есть)
 4. В настройках проекта (Settings → Environment Variables) добавить:
    - `HUBRIS_API_KEY` (или `OPENAI_API_KEY`)
-   - `HUBRIS_MODEL` (не `hubris/free`)
+   - `HUBRIS_BASE_URL` = `https://api.hubris.pw/v1`
+   - `HUBRIS_MODEL` = `google/gemini-2.5-flash` (нужна vision-модель для расчёта по плану)
    - `NOTIFY_EMAIL` — для уведомлений о заявках
 5. **Deploy**
 
@@ -66,7 +67,7 @@ npm test
 |---|---|---|
 | HUBRIS_API_KEY | нет | Ключ Hubris (sk-gw-...) |
 | HUBRIS_BASE_URL | нет | https://api.hubris.pw/v1 |
-| HUBRIS_MODEL | нет | Модель Hubris (не `hubris/free`) |
+| HUBRIS_MODEL | нет | Vision-модель для расчёта по плану (по умолч. `google/gemini-2.5-flash`) |
 | OPENAI_API_KEY | нет | Запасной провайдер |
 | PORT | нет | 3000 по умолчанию |
 | DATA_DIR | нет | Путь к папке с данными (SQLite) |

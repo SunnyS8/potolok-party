@@ -98,7 +98,7 @@ function useHubris() {
 
 function getPrimaryModel() {
   if (useHubris()) {
-    return process.env.HUBRIS_MODEL || 'deepseek-v4-flash-free';
+    return process.env.HUBRIS_MODEL || 'google/gemini-2.5-flash';
   }
   return process.env.OPENAI_MODEL || 'gpt-4o-mini';
 }
